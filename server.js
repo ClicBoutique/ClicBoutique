@@ -195,5 +195,9 @@ app.post("/api/paypal/webhook",(req,res)=>{
  res.status(501).json({error:"PAYPAL_WEBHOOK_REQUIRES_CONFIGURATION"});
 });
 
-app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.use((req, res) => {
+2
+res.sendFile(path.join(__dirname, "public", "index.html"));
+3
+});
 app.listen(process.env.PORT||3000,()=>console.log(`ClicBoutique on ${process.env.PORT||3000}`));
