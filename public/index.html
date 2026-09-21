@@ -1,1 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClicBoutique — Store Builder</title>
+<style>
+:root{--bg:#f7f7f8;--ink:#111318;--muted:#747985;--line:#e7e7eb;--card:#fff;--purple:#6d5ce7;--shadow:0 24px 70px rgba(17,19,24,.10)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}button,input{font:inherit}.top{height:72px;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:20}.logo{font-size:21px;font-weight:900;letter-spacing:-.8px}.logo span{color:var(--purple)}.topright{display:flex;gap:10px;align-items:center}.badge{padding:9px 13px;border:1px solid var(--line);background:#fff;border-radius:999px;font-size:13px}.btn{border:0;border-radius:12px;padding:12px 17px;font-weight:800;cursor:pointer}.primary{background:#111318;color:#fff;box-shadow:0 9px 24px rgba(17,19,24,.13)}.purple{background:var(--purple);color:#fff}.shell{max-width:1220px;margin:auto;padding:48px 28px}.intro{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-bottom:25px}.intro h1{font-size:48px;line-height:1;letter-spacing:-2.8px;margin:0 0 10px}.intro p{margin:0;color:var(--muted);max-width:600px;line-height:1.6}.grid{display:grid;grid-template-columns:370px 1fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 8px 35px rgba(17,19,24,.04)}.panel h2{margin:0 0 8px;font-size:19px}.panel .hint{font-size:13px;color:var(--muted);line-height:1.5}.field{margin-top:18px}.field label{font-size:12px;font-weight:800;display:block;margin-bottom:8px}.field input{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;outline:0}.field input:focus{border-color:#aaa0ef;box-shadow:0 0 0 4px #f0edff}.shopify{width:100%;display:flex;justify-content:center;align-items:center;gap:9px;margin-top:14px;background:#95bf47;color:#fff}.shopify .sq{width:18px;height:18px;border-radius:5px;background:#fff}.divider{display:flex;align-items:center;gap:10px;color:#aaa;font-size:12px;margin:18px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}.progress{height:7px;background:#ededf1;border-radius:99px;overflow:hidden;margin-top:18px}.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#6d5ce7,#a99fff);transition:width .5s}.status{margin-top:10px;color:var(--muted);font-size:13px;min-height:20px}.preview{background:#101116;border-radius:28px;min-height:700px;overflow:hidden;position:relative;box-shadow:var(--shadow)}.previewbar{height:52px;background:#17181e;color:#9d9fa8;display:flex;align-items:center;padding:0 18px;gap:7px;font-size:11px}.dot{width:8px;height:8px;border-radius:50%;background:#33353d}.store{height:648px;overflow:auto;background:#fff}.storeNav{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;border-bottom:1px solid #eee;position:sticky;top:0;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);z-index:2}.storeNav strong{font-size:18px}.storeNav span{font-size:12px;color:#555}.hero{min-height:520px;display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:48px 45px;align-items:center;background:linear-gradient(135deg,#f7f5ff,#fff)}.ey{font-size:11px;color:#6657d8;font-weight:900;text-transform:uppercase;letter-spacing:1px}.hero h2{font-size:53px;line-height:.98;letter-spacing:-3px;margin:14px 0}.hero p{color:#666;line-height:1.6}.storebtn{display:inline-block;background:#111;color:#fff;border-radius:12px;padding:13px 18px;font-weight:800;margin-top:10px}.productVisual{height:410px;border-radius:28px;background:radial-gradient(circle at 35% 25%,#fff 0 12%,#e5e1fb 13% 38%,#b2a9ec 39% 67%,#7c6ed5 68%);display:grid;place-items:center;font-size:100px;box-shadow:inset 0 0 60px rgba(255,255,255,.25);animation:levitate 4s ease-in-out infinite}.floatcard{position:absolute;right:25px;top:88px;background:rgba(255,255,255,.94);padding:14px 17px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,.12);font-size:12px;font-weight:800;animation:float 3s ease-in-out infinite}.section2{padding:45px}.featureRow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.feature{padding:22px;border:1px solid #eee;border-radius:18px}.feature b{display:block;margin-bottom:6px}.feature span{color:#777;font-size:13px;line-height:1.5}.bottomActions{display:flex;gap:10px;margin-top:18px}.bottomActions .btn{flex:1}.paywall{display:none;position:fixed;inset:0;background:rgba(8,9,13,.52);backdrop-filter:blur(10px);z-index:50;place-items:center;padding:20px}.paybox{background:#fff;border-radius:25px;padding:28px;width:min(480px,100%);box-shadow:0 30px 90px rgba(0,0,0,.25)}.paybox h2{margin:0 0 8px}.paybox p{color:var(--muted);line-height:1.55}.packs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}.pack{border:1px solid var(--line);border-radius:15px;padding:15px}.pack b{display:block;font-size:21px;margin:5px 0}.pack a{display:block;text-decoration:none;color:#fff;background:#111;border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:800}.close{float:right;border:0;background:#f1f1f3;border-radius:50%;width:32px;height:32px;cursor:pointer}@keyframes levitate{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@media(max-width:850px){.grid{grid-template-columns:1fr}.intro{display:block}.intro h1{font-size:38px;margin-bottom:14px}.hero{grid-template-columns:1fr;padding:30px}.hero h2{font-size:42px}.featureRow{grid-template-columns:1fr}.top{padding:0 16px}.topright .badge{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="logo">Clic<span>Boutique</span></div><div class="topright"><div class="badge">Crédits : <b id="credits">0</b></div><button class="btn primary" onclick="connectShopify()">Connecter Shopify</button></div></header>
 
+<main class="shell">
+<section class="intro"><div><h1>Crée ta boutique.</h1><p>Colle un produit fournisseur, connecte Shopify, puis transforme-le en une expérience mono-produit immersive. Le rendu est pensé comme une vraie boutique, pas comme une simple fiche produit.</p></div><div class="badge" id="shopStatus">Shopify non connecté</div></section>
+<div class="grid">
+<aside>
+<div class="panel">
+<h2>1. Connecter Shopify</h2><p class="hint">L'installation réelle passera par l'autorisation Shopify et les permissions de ton application.</p>
+<button class="btn shopify" onclick="connectShopify()"><span class="sq"></span> Connecter mon compte Shopify</button>
+<div class="divider">puis</div>
+<h2>2. Ton produit</h2><p class="hint">Entre l'URL de ton fournisseur.</p>
+<div class="field"><label>URL du produit</label><input id="url" placeholder="https://www.aliexpress.com/item/..."></div>
+<button class="btn purple" style="width:100%;margin-top:12px" onclick="generate()">Créer ma boutique →</button>
+<div class="status" id="status">En attente du produit.</div><div class="progress"><i id="progress"></i></div>
+</div>
+<div class="panel" style="margin-top:20px"><h2>3. Export</h2><p class="hint">L'export vers Shopify utilise 1 crédit. Si ton solde est à zéro, le paiement PayPal s'ouvre directement.</p><div class="bottomActions"><button class="btn primary" onclick="exportShop()">Exporter vers Shopify</button><button class="btn" style="border:1px solid var(--line);background:#fff" onclick="openPay()">Acheter des crédits</button></div></div>
+</aside>
+<section class="preview">
+<div class="previewbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:8px">aperçu — clicboutique.store</span></div>
+<div class="store">
+<div class="storeNav"><strong id="brand">Maison Nova</strong><span>Accueil &nbsp; Boutique &nbsp; Avis &nbsp; FAQ &nbsp; ◯ &nbsp; ♡ &nbsp; 🛒</span></div>
+<div class="hero">
+<div><div class="ey">Édition exclusive</div><h2 id="title">Un produit qui mérite sa propre boutique.</h2><p id="copy">Une présentation premium, une galerie immersive et un parcours d'achat pensé autour d'un seul produit.</p><span class="storebtn">Découvrir maintenant →</span></div>
+<div class="productVisual" id="visual">✦</div>
+</div>
+<div class="floatcard">✦ Expérience premium<br><span style="font-weight:500;color:#777">Design fluide & animé</span></div>
+<div class="section2"><div class="featureRow"><div class="feature"><b>Galerie immersive</b><span>Visuels mis en scène pour attirer immédiatement l'attention.</span></div><div class="feature"><b>Arguments clairs</b><span>Les bénéfices sont organisés autour du produit.</span></div><div class="feature"><b>Conversion</b><span>CTA, confiance et réassurance intégrés au parcours.</span></div></div></div>
+</div></section>
+</div>
+</main>
+
+<div class="paywall" id="paywall"><div class="paybox"><button class="close" onclick="closePay()">×</button><h2>Il faut 1 crédit pour exporter.</h2><p>Choisis ton pack. Après paiement confirmé côté serveur, le crédit sera ajouté à ton compte.</p><div class="packs">
+<div class="pack"><small>Starter</small><b>9,90 €</b><small>10 crédits</small><a href="https://www.paypal.com/ncp/payment/QQ34E5A5WF3S4" target="_blank">PayPal</a></div>
+<div class="pack"><small>Creator</small><b>19,90 €</b><small>25 crédits</small><a href="https://www.paypal.com/ncp/payment/J8XLJD94277F2" target="_blank">PayPal</a></div>
+<div class="pack"><small>Pro</small><b>39,90 €</b><small>60 crédits</small><a href="https://www.paypal.com/ncp/payment/J8XLJD94277F2" target="_blank">PayPal</a></div>
+</div><p style="font-size:12px">Note : les liens PayPal sont ceux fournis pour ClicBoutique. Creator et Pro utilisent actuellement le même lien.</p></div></div>
+
+<script>
+let credits=Number(localStorage.getItem('cb_credits')||0), connected=false;
+const $=x=>document.getElementById(x);
+function sync(){ $('credits').textContent=credits; localStorage.setItem('cb_credits',credits)}
+function connectShopify(){
+  // Production: redirect to /auth/shopify, which starts Shopify OAuth.
+  window.location.href='/auth/shopify';
+}
+function generate(){
+  const u=$('url').value.trim();
+  if(!connected){$('status').textContent='Connecte Shopify avant de générer.';return}
+  if(!u){$('status').textContent='Ajoute une URL fournisseur.';return}
+  $('progress').style.width='12%';$('status').textContent='Analyse du produit…';
+  let p=12,i=0;const s=['Récupération des données…','Extraction des visuels…','Construction du design…','Animation de la boutique…','Préparation de l’aperçu…'];
+  const t=setInterval(()=>{p=Math.min(100,p+18);$('progress').style.width=p+'%';$('status').textContent=s[Math.min(i++,s.length-1)];if(p>=100){clearInterval(t);$('status').textContent='Boutique générée.';$('title').textContent='Une expérience pensée autour de ton produit.';$('brand').textContent='ClicBoutique Studio'}},550);
+}
+function exportShop(){if(!connected){connectShopify();return}if(credits<1){openPay();return}credits--;sync();$('status').textContent='Export Shopify lancé…';setTimeout(()=>{$('status').textContent='Boutique envoyée à Shopify.'},1000)}
+function openPay(){$('paywall').style.display='grid'}function closePay(){$('paywall').style.display='none'}sync();
+</script>
+</body></html>
