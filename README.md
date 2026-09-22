@@ -50,3 +50,7 @@ Le projet est adapté à Render/Railway/Fly.io ou un VPS Node. Il faut une base 
 6. Ajouter les mutations Shopify nécessaires au thème/sections si l'objectif est de publier un design complet, pas seulement un produit.
 7. Ajouter extraction fournisseur avec navigateur headless/proxy spécialisé si AliExpress bloque les requêtes serveur.
 8. Ajouter logs, monitoring, backups et HTTPS.
+
+
+## Connexion Shopify simplifiée
+L'interface accepte maintenant l'URL copiée depuis l'admin Shopify (`https://admin.shopify.com/store/...`) ou l'ancienne URL `https://NOM.myshopify.com/admin`. ClicBoutique extrait automatiquement le domaine Shopify puis lance l'autorisation OAuth. Aucun mot de passe Shopify n'est demandé à ClicBoutique.
