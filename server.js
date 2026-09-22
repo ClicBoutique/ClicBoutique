@@ -56,10 +56,14 @@ app.use(express.static(path.join(__dirname,"public")));
 app.use("/api/",rateLimit({windowMs:60_000,max:100}));
 
 const GUEST_RE=/^guest_[0-9a-f]{20}@guest\.local$/;
-const sign=(u,remember)=>jwt.sign({uid:u.id,email:u.email},process.env.SESSION_SECRET,{expiresIn:remember?"30d":"1d"});
+// Admin par défaut : peut être surchargé avec la variable d'env ADMIN_EMAIL,
+// mais fonctionne même sans configuration Render/Vercel.
+const ADMIN_EMAIL=(process.env.ADMIN_EMAIL||"lucarega1304@gmail.com").trim().toLowerCase();
+// Les connexions par email/mot de passe restent connectées 30 jours par défaut,
+// pour qu'un même email n'ait pas à se reconnecter à chaque visite.
+const sign=(u,remember)=>jwt.sign({uid:u.id,email:u.email},process.env.SESSION_SECRET,{expiresIn:"30d"});
 function setSession(res,u,remember){
- const opt={httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production"};
- if(remember)opt.maxAge=2592000000; // 30 jours si "se souvenir de moi", sinon cookie de session
+ const opt={httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:2592000000};
  res.cookie("cb_session",sign(u,remember),opt);
 }
 function auth(req,res,next){
@@ -112,36 +116,62 @@ function extractJsonLd(html){
  }
  return items.flatMap(x=>Array.isArray(x)?x:[x]);
 }
+function looksBlocked(html){
+ return /id=["']nocaptcha["']|punish\.aliexpress|login\.aliexpress|verify you are a human|slider.{0,20}captcha|请完成安全验证/i.test(html||'');
+}
+async function fetchHtml(url,extraHeaders={}){
+ const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
+ try{
+  const r=await fetch(url,{signal:c.signal,redirect:'follow',headers:{
+   'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+   'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+   'Accept-Language':'fr-FR,fr;q=0.9,en-US,en;q=0.8',
+   'Referer':'https://www.google.com/',
+   ...extraHeaders
+  }});
+  if(!r.ok)return null;
+  return await r.text();
+ }catch{return null}finally{clearTimeout(timer)}
+}
+function mobileVariant(url){
+ try{
+  const u=new URL(url);
+  if(/aliexpress\.com$/i.test(u.hostname.replace(/^www\./,'')) && !/^m\./i.test(u.hostname)){
+   u.hostname='m.'+u.hostname.replace(/^www\./,'');
+   return u.toString();
+  }
+ }catch{}
+ return null;
+}
 async function fetchSupplier(url){
  const slug=decodeURIComponent(url.split('?')[0].split('/').filter(Boolean).pop()||'Produit').replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
  const fallbackTitle=/^\d+(?:\.html)?$/i.test(slug)?'Produit AliExpress':(slug.replace(/\.html$/i,'').slice(0,120)||'Produit');
  const fallback={title:fallbackTitle,description:'Découvrez ce produit dans une présentation claire et professionnelle.',images:[],imagesBlocked:true,price:'',currency:'EUR',brand:'Maison Nova'};
- const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
- try{
-  let r;
-  try{r=await fetch(url,{signal:c.signal,redirect:'follow',headers:{
-    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
-    'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9,fr;q=0.8'
-  }});}catch{return fallback;}
-  if(!r.ok)return fallback;
-  const html=await r.text();
-  const jsonld=extractJsonLd(html).find(x=>x && (x['@type']==='Product'||Array.isArray(x['@type'])&&x['@type'].includes('Product')))||{};
-  const embeddedTitle=html.match(/(?:productTitle|subject|productName)\s*[:=]\s*["']([^"']{8,300})["']/i)?.[1];
-  const title=cleanProductTitle(jsonld.name || embeddedTitle ||
-    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1] ||
-    html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],fallbackTitle);
-  const desc=decodeHtmlText(jsonld.description || html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)/i)?.[1] || fallback.description).slice(0,1000);
-  const offer=Array.isArray(jsonld.offers)?jsonld.offers[0]:(jsonld.offers||{});
-  const price=String(offer.price||html.match(/(?:"price"|"salePrice"|"minPrice")\s*:\s*["']?([0-9]+(?:[.,][0-9]{1,2})?)/i)?.[1]||'').replace(',','.');
-  const currency=String(offer.priceCurrency||html.match(/(?:"currency"|"priceCurrency")\s*:\s*["']([A-Z]{3})["']/i)?.[1]||'EUR');
-  const brand=decodeHtmlText(typeof jsonld.brand==='string'?jsonld.brand:(jsonld.brand?.name||'')) || 'Maison Nova';
-  const found=[];
-  const jsonImages=jsonld.image?(Array.isArray(jsonld.image)?jsonld.image:[jsonld.image]):[];
-  found.push(...jsonImages);
-  found.push(...extractImages(html,url));
-  const images=unique(found).slice(0,12);
-  return {title,description:desc,images,imagesBlocked:images.length===0,price,currency,brand};
- }finally{clearTimeout(timer)}
+ // 1ère tentative : l'URL telle quelle. Si le fournisseur bloque (anti-bot) ou ne renvoie aucune
+ // image, on retente sur la version mobile qui est souvent moins protégée.
+ let html=await fetchHtml(url);
+ let effectiveUrl=url;
+ if(!html || looksBlocked(html)){
+  const mUrl=mobileVariant(url);
+  if(mUrl){const mHtml=await fetchHtml(mUrl,{'Sec-Fetch-Mode':'navigate'});if(mHtml && !looksBlocked(mHtml)){html=mHtml;effectiveUrl=mUrl;}}
+ }
+ if(!html)return fallback;
+ const jsonld=extractJsonLd(html).find(x=>x && (x['@type']==='Product'||Array.isArray(x['@type'])&&x['@type'].includes('Product')))||{};
+ const embeddedTitle=html.match(/(?:productTitle|subject|productName)\s*[:=]\s*["']([^"']{8,300})["']/i)?.[1];
+ const title=cleanProductTitle(jsonld.name || embeddedTitle ||
+   html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1] ||
+   html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],fallbackTitle);
+ const desc=decodeHtmlText(jsonld.description || html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)/i)?.[1] || fallback.description).slice(0,1000);
+ const offer=Array.isArray(jsonld.offers)?jsonld.offers[0]:(jsonld.offers||{});
+ const price=String(offer.price||html.match(/(?:"price"|"salePrice"|"minPrice")\s*:\s*["']?([0-9]+(?:[.,][0-9]{1,2})?)/i)?.[1]||'').replace(',','.');
+ const currency=String(offer.priceCurrency||html.match(/(?:"currency"|"priceCurrency")\s*:\s*["']([A-Z]{3})["']/i)?.[1]||'EUR');
+ const brand=decodeHtmlText(typeof jsonld.brand==='string'?jsonld.brand:(jsonld.brand?.name||'')) || 'Maison Nova';
+ const found=[];
+ const jsonImages=jsonld.image?(Array.isArray(jsonld.image)?jsonld.image:[jsonld.image]):[];
+ found.push(...jsonImages);
+ found.push(...extractImages(html,effectiveUrl));
+ const images=unique(found).slice(0,12);
+ return {title,description:desc,images,imagesBlocked:images.length===0,price,currency,brand};
 }
 
 async function aiCopy(data){
@@ -164,7 +194,7 @@ app.post("/api/auth/register",async(req,res)=>{
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<8)return res.status(400).json({error:"EMAIL_OR_PASSWORD_INVALID"});
  try{
   const hash=await bcrypt.hash(password,12);
-  const info=db.prepare("INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)").run(email,hash,email===process.env.ADMIN_EMAIL?.toLowerCase()?999999:0);
+  const info=db.prepare("INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)").run(email,hash,email===ADMIN_EMAIL?999999:0);
   const u=userRow(info.lastInsertRowid);setSession(res,u,remember);
   res.json({user:{email:u.email,credits:u.credits,guest:false}});
  }catch(e){res.status(409).json({error:"EMAIL_ALREADY_EXISTS"})}
@@ -234,14 +264,14 @@ app.get('/api/auth/google/callback',async(req,res)=>{
   let u=db.prepare('SELECT * FROM users WHERE email=?').get(email);
   if(!u){
    const hash=await bcrypt.hash(crypto.randomBytes(32).toString('hex'),12);
-   const credits=email===process.env.ADMIN_EMAIL?.toLowerCase()?999999:0;
+   const credits=email===ADMIN_EMAIL?999999:0;
    const info=db.prepare('INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)').run(email,hash,credits); u=userRow(info.lastInsertRowid);
   }
   setSession(res,u,true); res.clearCookie('google_state'); res.redirect('/?social=google');
  }catch(e){res.redirect('/?error=google_login');}
 });
 
-app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);if(process.env.ADMIN_EMAIL && u.email.toLowerCase()===process.env.ADMIN_EMAIL.toLowerCase() && u.credits<999999)db.prepare("UPDATE users SET credits=999999 WHERE id=?").run(u.id);const fresh=userRow(u.id);res.json({email:fresh.email,credits:fresh.credits,guest:GUEST_RE.test(fresh.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(fresh.id)})});
+app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);if(u.email.toLowerCase()===ADMIN_EMAIL && u.credits<999999)db.prepare("UPDATE users SET credits=999999 WHERE id=?").run(u.id);const fresh=userRow(u.id);res.json({email:fresh.email,credits:fresh.credits,guest:GUEST_RE.test(fresh.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(fresh.id)})});
 
 app.get("/api/shopify/start",auth,(req,res)=>{
  const shop=String(req.query.shop||"").trim().toLowerCase();
@@ -288,6 +318,18 @@ app.post("/api/edit",auth,async(req,res)=>{
   db.prepare("INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)").run(u.id,"edit",-1,String(g.id));
   res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],faq:ai.faq||[],brandName:ai.brandName||"Maison Nova",price:"",currency:"EUR",images,imagesBlocked:images.length===0}});
  }catch(e){res.status(502).json({error:"EDIT_FAILED",message:"La régénération a échoué. Réessaie."})}
+});
+
+// Solution de secours quand AliExpress bloque la récupération automatique des photos :
+// l'utilisateur colle lui-même les liens d'images. Gratuit (aucun crédit débité).
+app.post("/api/generations/:id/images",auth,(req,res)=>{
+ const g=db.prepare("SELECT * FROM generations WHERE id=? AND user_id=?").get(req.params.id,req.user.uid);
+ if(!g)return res.status(404).json({error:"GENERATION_NOT_FOUND"});
+ const list=Array.isArray(req.body.images)?req.body.images:[];
+ const images=unique(list.map(safeUrl)).filter(u=>u && /\.(jpg|jpeg|png|webp|avif|gif)(\?|$)/i.test(u)).slice(0,12);
+ if(!images.length)return res.status(400).json({error:"NO_VALID_IMAGE_URL"});
+ db.prepare("UPDATE generations SET images_json=? WHERE id=?").run(JSON.stringify(images),g.id);
+ res.json({ok:true,images});
 });
 
 async function shopifyGraphQL(shop,token,query,variables){
