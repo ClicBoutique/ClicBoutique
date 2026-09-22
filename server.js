@@ -83,21 +83,44 @@ function extractImages(html,base){
  for(const m of html.matchAll(/https?:\/\/[^"'\\\s]+(?:alicdn|aliexpress)[^"'\\\s]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'\\\s]*)?/gi))add(m[0]);
  return unique(out).slice(0,20);
 }
+async function validateImage(url){
+ try{
+  const c=new AbortController();const timer=setTimeout(()=>c.abort(),5000);
+  try{
+   let r=await fetch(url,{method:"HEAD",signal:c.signal,redirect:"follow",headers:{"User-Agent":"Mozilla/5.0","Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}});
+   if(!r.ok){
+    r=await fetch(url,{method:"GET",signal:c.signal,redirect:"follow",headers:{"User-Agent":"Mozilla/5.0","Range":"bytes=0-2048","Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}});
+   }
+   return r.ok;
+  }finally{clearTimeout(timer)}
+ }catch{return false}
+}
+async function keepAccessibleImages(images){
+ const checked=await Promise.all(images.slice(0,12).map(async src=>({src,ok:await validateImage(src)})));
+ return checked.filter(x=>x.ok).map(x=>x.src).slice(0,10);
+}
 async function fetchSupplier(url){
+ const fallbackTitle=decodeURIComponent(url.split("?")[0].split("/").filter(Boolean).pop()||"Produit").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().slice(0,120)||"Produit";
  const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
  try{
-  const r=await fetch(url,{signal:c.signal,redirect:"follow",headers:{
-   "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-   "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-   "Accept-Language":"en-US,en;q=0.9,fr;q=0.8"
-  }});
-  if(!r.ok)throw new Error("SUPPLIER_HTTP_"+r.status);
+  let r;
+  try{
+   r=await fetch(url,{signal:c.signal,redirect:"follow",headers:{
+    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language":"en-US,en;q=0.9,fr;q=0.8"
+   }});
+  }catch{
+   return {title:fallbackTitle,description:"Découvrez ce produit dans une présentation claire et professionnelle.",images:[],imagesBlocked:true};
+  }
+  if(!r.ok)return {title:fallbackTitle,description:"Découvrez ce produit dans une présentation claire et professionnelle.",images:[],imagesBlocked:true};
   const html=await r.text();
   const title=(html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]
-    ||html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"Produit").replace(/\s+/g," ").trim().slice(0,180);
+    ||html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||fallbackTitle).replace(/\s+/g," ").trim().slice(0,180);
   const desc=(html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)/i)?.[1]||"Une sélection pensée pour simplifier votre quotidien.").slice(0,500);
-  const images=extractImages(html,url);
-  return {title,description:desc,images};
+  const found=extractImages(html,url);
+  const images=await keepAccessibleImages(found);
+  return {title,description:desc,images,imagesBlocked:images.length===0};
  }finally{clearTimeout(timer)}
 }
 
@@ -188,7 +211,7 @@ app.post("/api/generate",auth,async(req,res)=>{
   const title=ai?.title||p.title, description=ai?.description||p.description;
   const info=db.prepare(`INSERT INTO generations(user_id,supplier_url,title,description,images_json) VALUES(?,?,?,?,?)`)
    .run(req.user.uid,url,title,description,JSON.stringify(p.images));
-  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],images:p.images}});
+  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],images:p.images,imagesBlocked:!!p.imagesBlocked}});
  }catch(e){res.status(502).json({error:"SUPPLIER_FETCH_FAILED",message:"Le fournisseur a refusé ou bloqué la récupération. Essayez une autre URL."})}
 });
 
@@ -203,7 +226,7 @@ app.post("/api/edit",auth,async(req,res)=>{
   db.prepare("UPDATE generations SET title=?,description=? WHERE id=?").run(title,description,g.id);
   db.prepare("UPDATE users SET credits=credits-1 WHERE id=? AND credits>0").run(u.id);
   db.prepare("INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)").run(u.id,"edit",-1,String(g.id));
-  res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],images}});
+  res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],images,imagesBlocked:images.length===0}});
  }catch(e){res.status(502).json({error:"EDIT_FAILED",message:"La régénération a échoué. Réessaie."})}
 });
 
