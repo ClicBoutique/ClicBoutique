@@ -219,12 +219,13 @@ main{position:relative;z-index:1}
     <div class="card">
       <div class="shop-icon">🛍️</div>
       <h2>Connecte ta boutique Shopify</h2>
-      <p class="sub">ClicBoutique a besoin d'un accès à ta boutique Shopify pour pouvoir y exporter le produit généré à l'étape suivante.</p>
+      <p class="sub">Va dans ton admin Shopify, copie l'adresse de ta boutique et colle-la ici. ClicBoutique reconnaîtra automatiquement ta boutique et te redirigera vers Shopify pour autoriser la connexion.</p>
       <div class="field">
-        <label>Domaine Shopify</label>
-        <input id="shopDomain" placeholder="ma-boutique.myshopify.com">
+        <label>Adresse de ton admin Shopify</label>
+        <input id="shopDomain" placeholder="https://admin.shopify.com/store/ma-boutique" autocomplete="url">
       </div>
-      <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Connecter Shopify</button>
+      <div class="hint" style="color:#777;margin-top:8px;text-align:left">Exemple : Shopify → copie l'adresse en haut de la page Admin → colle-la ici.</div>
+      <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Connecter ma boutique</button>
       <div class="status" id="shopStatus">&nbsp;</div>
     </div>
   </div>
@@ -390,12 +391,32 @@ async function startFlow(){
 }
 
 /* ---- étape 2 : Shopify ---- */
+function extractShopifyDomain(value){
+  let v=String(value||'').trim().toLowerCase();
+  if(!v) return null;
+  if(!/^https?:\\/\\//.test(v)) v='https://'+v;
+  try{
+    const u=new URL(v);
+    // Shopify Admin URL: https://admin.shopify.com/store/STORE_HANDLE
+    if(u.hostname==='admin.shopify.com'){
+      const m=u.pathname.match(/^\\/store\\/([a-z0-9][a-z0-9-]*)/i);
+      return m ? m[1].toLowerCase()+'.myshopify.com' : null;
+    }
+    // Classic admin URL: https://STORE.myshopify.com/admin
+    const m=u.hostname.match(/^([a-z0-9][a-z0-9-]*)\\.myshopify\\.com$/i);
+    return m ? u.hostname.toLowerCase() : null;
+  }catch{return null;}
+}
+
 async function connectShopify(){
-  const shop=$('shopDomain').value.trim().toLowerCase();
-  if(!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)){
-    $('shopStatus').textContent='Entre un domaine du type ma-boutique.myshopify.com';
+  const raw=$('shopDomain').value;
+  const shop=extractShopifyDomain(raw);
+  if(!shop){
+    $('shopStatus').textContent='Colle l’adresse de ton admin Shopify, par exemple https://admin.shopify.com/store/ma-boutique';
     $('shopStatus').className='status err'; return;
   }
+  $('shopStatus').textContent='Connexion à Shopify…';
+  $('shopStatus').className='status';
   await ensureGuest();
   try{
     localStorage.setItem('cb_url', pendingUrl || localStorage.getItem('cb_url') || '');
