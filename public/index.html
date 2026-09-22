@@ -168,6 +168,17 @@ main{position:relative;z-index:1}
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);background:#1c1440;border:1px solid #ffffff2a;color:#fff;padding:14px 20px;border-radius:14px;font-size:13.5px;font-weight:600;box-shadow:0 20px 40px #0009;z-index:50;transition:transform .35s cubic-bezier(.2,.9,.3,1);max-width:90vw}
 .toast.on{transform:translate(-50%,0)}
 
+/* ---------- packs crédits ---------- */
+.pack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}
+.pack-card{background:#fff;border:1px solid #e8e4f2;border-radius:22px;padding:24px;box-shadow:0 14px 35px #1b12320d;display:flex;flex-direction:column}
+.pack-card h3{font-family:Sora;margin:0 0 8px;font-size:20px}
+.pack-price{font-size:30px;font-weight:800;color:#6d28d9;margin:4px 0 8px}
+.pack-credit{font-weight:700;margin-bottom:14px}
+.pack-card ul{padding-left:19px;color:#665f78;line-height:1.8;font-size:13.5px;flex:1;margin:0 0 18px}
+.pack-buy{width:100%;text-align:center;text-decoration:none}
+.pack-note{margin-top:16px;color:#6f6880;font-size:12.5px;text-align:center}
+@media(max-width:820px){.pack-grid{grid-template-columns:1fr}}
+
 @media(max-width:820px){
   .hero{grid-template-columns:1fr}
   .storehero,.feat{grid-template-columns:1fr}
@@ -204,7 +215,7 @@ main{position:relative;z-index:1}
       <h1>Colle un lien. Regarde une boutique prendre vie.</h1>
       <p>Donne l'URL d'un produit fournisseur et ClicBoutique construit autour une boutique complète : textes, mise en page, visuels — prête à exporter sur Shopify.</p>
       <div class="form">
-        <input id="landingUrl" placeholder="https://www.aliexpress.com/item/...">
+        <input id="landingUrl" name="productUrl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://www.aliexpress.com/item/...">
         <button class="btn" onclick="startFlow()">Commencer</button>
       </div>
       <div class="hint" id="urlHint">&nbsp;</div>
@@ -305,11 +316,24 @@ main{position:relative;z-index:1}
     <div class="exportbar">
       <div class="txt">1 crédit est débité uniquement quand l'export Shopify réussit.</div>
       <div style="display:flex;gap:10px">
-        <button class="btn ghost" onclick="location.href='/api/paypal/links'">Packs de crédits</button>
+        <button class="btn ghost" onclick="openPacks()">Packs de crédits</button>
         <button class="btn" onclick="doExport()">Exporter vers Shopify</button>
       </div>
     </div>
     <div class="status" id="storeStatus" style="text-align:center;color:#cfc9e8">&nbsp;</div>
+  </div>
+</section>
+
+<!-- ÉCRAN PACKS -->
+<section class="screen" id="screen-packs">
+  <div class="center">
+    <div class="card" style="max-width:920px;width:100%">
+      <h2>Choisis ton pack de crédits</h2>
+      <p class="sub">Un crédit sert à modifier ou exporter une boutique.</p>
+      <div class="pack-grid" id="packGrid"></div>
+      <p class="pack-note">Le paiement est effectué sur PayPal. Les crédits sont ajoutés à ton compte après validation du paiement.</p>
+      <button class="btn ghost" style="margin-top:18px" onclick="goBackFromPacks()">Retour</button>
+    </div>
   </div>
 </section>
 
@@ -370,8 +394,8 @@ async function refreshMe(){
   try{
     me=await api('/api/me');
     $('credits').textContent=me.credits;
-    $('authTopBtn').style.display = (me.guest===false) ? 'none' : '';
-    if(me.guest===false) $('authTopBtn').textContent=me.email;
+    $('authTopBtn').style.display = '';
+    $('authTopBtn').textContent = me.guest===false ? 'Mon compte' : 'Se connecter';
   }catch{ me=null; }
 }
 async function ensureGuest(){
@@ -519,7 +543,7 @@ function fillStore(p){
   else { $('prod').style.backgroundImage='none'; $('prod').textContent='✦'; }
 }
 async function editStore(){
-  if(!me || me.credits<1){ toast('Il te faut au moins 1 crédit pour modifier la boutique.'); location.href='/api/paypal/links'; return; }
+  if(!me || me.credits<1){ toast('Il te faut au moins 1 crédit pour modifier la boutique.'); openPacks(); return; }
   const btn=$('editBtn'); btn.disabled=true; btn.textContent='Régénération…';
   try{
     const j=await api('/api/edit',{method:'POST',body:JSON.stringify({generationId})});
@@ -552,9 +576,8 @@ async function doExport(){
     goToScreen('export');
   }catch(e){
     if(e.status===402){
-      const p=await api('/api/paypal/links');
-      window.open(p.creator.url,'_blank');
-      $('storeStatus').textContent="Solde insuffisant : la page d'achat de crédits a été ouverte.";
+      openPacks();
+      $('storeStatus').textContent="Solde insuffisant : choisis un pack de crédits.";
     }else if(e.data?.error==='SHOPIFY_NOT_CONNECTED'){
       localStorage.setItem('cb_pending_export','1');
       goToScreen('shopify');
@@ -576,6 +599,26 @@ function launchConfetti(){
     wrap.appendChild(c);
   }
 }
+async function openPacks(){
+  goToScreen('packs');
+  const grid=$('packGrid');
+  grid.innerHTML='<div class="status">Chargement des packs…</div>';
+  try{
+    const packs=await api('/api/paypal/links');
+    const list=Object.values(packs);
+    grid.innerHTML=list.map(p=>`<div class="pack-card">
+      <h3>${escapeHtml(p.name)}</h3>
+      <div class="pack-price">${escapeHtml(p.price)} €</div>
+      <div class="pack-credit">${p.credits} crédits</div>
+      <ul><li>Générations et modifications de boutique</li><li>Crédits liés à ton compte</li><li>Paiement sécurisé par PayPal</li></ul>
+      <a class="btn pack-buy" href="${escapeAttr(p.url)}" target="_blank" rel="noopener">Acheter sur PayPal</a>
+    </div>`).join('');
+  }catch(e){ grid.innerHTML='<div class="status err">Impossible de charger les packs.</div>'; }
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escapeAttr(v){return escapeHtml(v);}
+function goBackFromPacks(){ goToScreen(generationId?'store':'url'); }
+
 function resetFlow(){
   generationId=null; product=null; pendingUrl=''; localStorage.removeItem('cb_url');
   $('landingUrl').value=''; goToScreen('url');
