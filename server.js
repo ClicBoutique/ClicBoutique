@@ -72,55 +72,75 @@ function userRow(id){return db.prepare("SELECT * FROM users WHERE id=?").get(id)
 function safeUrl(u){try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.toString():null}catch{return null}}
 function unique(a){return [...new Set(a.filter(Boolean))]}
 
+function decodeHtmlText(v){
+ return String(v||'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\\\//g,'/').trim();
+}
+function cleanProductTitle(v,fallback){
+ let t=decodeHtmlText(v).replace(/\s+/g,' ').trim();
+ t=t.replace(/^AliExpress\s*[:\-|–—]?\s*/i,'').replace(/\s*[|–—-]\s*AliExpress.*$/i,'').trim();
+ if(!t || /^\d{10,}\.html$/i.test(t) || /^\d+\.html$/i.test(t)) return fallback;
+ return t.slice(0,180)||fallback;
+}
 function extractImages(html,base){
  const out=[];
- const add=u=>{try{if(!u)return;u=u.replace(/&amp;/g,"&").trim();const abs=new URL(u,base).toString();if(/\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs)||/alicdn|aliexpress|shopifycdn|cdn/i.test(abs))out.push(abs)}catch{}};
- for(const m of html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi))add(m[1]);
- for(const m of html.matchAll(/<img[^>]+(?:src|data-src|data-original|data-lazy-src)=["']([^"']+)["']/gi))add(m[1]);
- for(const m of html.matchAll(/(?:imagePathList|imageUrlList|skuImages|galleryImages|imageList|images)\s*[:=]\s*(\[[\s\S]{0,10000}?\])/gi)){
-   const block=m[1]; for(const x of block.matchAll(/["'](https?:[^"']+|\/\/[^"']+)["']/g))add(x[1]);
- }
- for(const m of html.matchAll(/https?:\/\/[^"'\\\s]+(?:alicdn|aliexpress)[^"'\\\s]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'\\\s]*)?/gi))add(m[0]);
+ const add=u=>{try{
+   if(!u)return;
+   u=decodeHtmlText(u).replace(/^\\\//,'/').trim();
+   if(u.startsWith('//'))u='https:'+u;
+   const abs=new URL(u,base).toString();
+   if(/^https?:/i.test(abs) && (/(alicdn|aliexpress|ae01|ae04|ae0[1-9])/i.test(abs) || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs))) out.push(abs);
+ }catch{}};
+ const patterns=[
+  /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi,
+  /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/gi,
+  /<img[^>]+(?:src|data-src|data-original|data-lazy-src|data-ks-lazyload)=["']([^"']+)["']/gi,
+  /(?:imagePathList|imageUrlList|skuImages|galleryImages|imageList|images)\s*[:=]\s*(\[[\s\S]{0,30000}?\])/gi,
+  /(?:imageUrl|imagePath|imageURL)\s*[:=]\s*["']([^"']+)["']/gi,
+  /https?:\\?\/\\?\/[^"'\\\s]+(?:alicdn|aliexpress)[^"'\\\s]+/gi
+ ];
+ for(const re of patterns){for(const m of html.matchAll(re)){
+   const block=m[1]||m[0];
+   if(re===patterns[3]) for(const x of block.matchAll(/["'](https?:[^"']+|\/\/[^"']+)["']/g)) add(x[1]);
+   else add(block);
+ }}
  return unique(out).slice(0,20);
 }
-async function validateImage(url){
- try{
-  const c=new AbortController();const timer=setTimeout(()=>c.abort(),5000);
-  try{
-   let r=await fetch(url,{method:"HEAD",signal:c.signal,redirect:"follow",headers:{"User-Agent":"Mozilla/5.0","Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}});
-   if(!r.ok){
-    r=await fetch(url,{method:"GET",signal:c.signal,redirect:"follow",headers:{"User-Agent":"Mozilla/5.0","Range":"bytes=0-2048","Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}});
-   }
-   return r.ok;
-  }finally{clearTimeout(timer)}
- }catch{return false}
-}
-async function keepAccessibleImages(images){
- const checked=await Promise.all(images.slice(0,12).map(async src=>({src,ok:await validateImage(src)})));
- return checked.filter(x=>x.ok).map(x=>x.src).slice(0,10);
+function extractJsonLd(html){
+ const items=[];
+ for(const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)){
+  try{items.push(JSON.parse(m[1].trim().replace(/\u002F/g,'/')))}catch{}
+ }
+ return items.flatMap(x=>Array.isArray(x)?x:[x]);
 }
 async function fetchSupplier(url){
- const fallbackTitle=decodeURIComponent(url.split("?")[0].split("/").filter(Boolean).pop()||"Produit").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().slice(0,120)||"Produit";
+ const slug=decodeURIComponent(url.split('?')[0].split('/').filter(Boolean).pop()||'Produit').replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
+ const fallbackTitle=/^\d+(?:\.html)?$/i.test(slug)?'Produit AliExpress':(slug.replace(/\.html$/i,'').slice(0,120)||'Produit');
+ const fallback={title:fallbackTitle,description:'Découvrez ce produit dans une présentation claire et professionnelle.',images:[],imagesBlocked:true,price:'',currency:'EUR',brand:'Maison Nova'};
  const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
  try{
   let r;
-  try{
-   r=await fetch(url,{signal:c.signal,redirect:"follow",headers:{
-    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language":"en-US,en;q=0.9,fr;q=0.8"
-   }});
-  }catch{
-   return {title:fallbackTitle,description:"Découvrez ce produit dans une présentation claire et professionnelle.",images:[],imagesBlocked:true};
-  }
-  if(!r.ok)return {title:fallbackTitle,description:"Découvrez ce produit dans une présentation claire et professionnelle.",images:[],imagesBlocked:true};
+  try{r=await fetch(url,{signal:c.signal,redirect:'follow',headers:{
+    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
+    'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9,fr;q=0.8'
+  }});}catch{return fallback;}
+  if(!r.ok)return fallback;
   const html=await r.text();
-  const title=(html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]
-    ||html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||fallbackTitle).replace(/\s+/g," ").trim().slice(0,180);
-  const desc=(html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)/i)?.[1]||"Une sélection pensée pour simplifier votre quotidien.").slice(0,500);
-  const found=extractImages(html,url);
-  const images=await keepAccessibleImages(found);
-  return {title,description:desc,images,imagesBlocked:images.length===0};
+  const jsonld=extractJsonLd(html).find(x=>x && (x['@type']==='Product'||Array.isArray(x['@type'])&&x['@type'].includes('Product')))||{};
+  const embeddedTitle=html.match(/(?:productTitle|subject|productName)\s*[:=]\s*["']([^"']{8,300})["']/i)?.[1];
+  const title=cleanProductTitle(jsonld.name || embeddedTitle ||
+    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1] ||
+    html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],fallbackTitle);
+  const desc=decodeHtmlText(jsonld.description || html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)/i)?.[1] || fallback.description).slice(0,1000);
+  const offer=Array.isArray(jsonld.offers)?jsonld.offers[0]:(jsonld.offers||{});
+  const price=String(offer.price||html.match(/(?:"price"|"salePrice"|"minPrice")\s*:\s*["']?([0-9]+(?:[.,][0-9]{1,2})?)/i)?.[1]||'').replace(',','.');
+  const currency=String(offer.priceCurrency||html.match(/(?:"currency"|"priceCurrency")\s*:\s*["']([A-Z]{3})["']/i)?.[1]||'EUR');
+  const brand=decodeHtmlText(typeof jsonld.brand==='string'?jsonld.brand:(jsonld.brand?.name||'')) || 'Maison Nova';
+  const found=[];
+  const jsonImages=jsonld.image?(Array.isArray(jsonld.image)?jsonld.image:[jsonld.image]):[];
+  found.push(...jsonImages);
+  found.push(...extractImages(html,url));
+  const images=unique(found).slice(0,12);
+  return {title,description:desc,images,imagesBlocked:images.length===0,price,currency,brand};
  }finally{clearTimeout(timer)}
 }
 
@@ -131,7 +151,7 @@ async function aiCopy(data){
    "content-type":"application/json","x-api-key":process.env.ANTHROPIC_API_KEY,
    "anthropic-version":"2023-06-01"
   },body:JSON.stringify({model:process.env.CLAUDE_MODEL||"claude-haiku-4-5-20251001",max_tokens:1200,
-   system:"Return ONLY valid JSON with keys title,subtitle,description,benefits (array of 4 strings). Do not invent technical specs, certifications, prices or medical claims.",
+   system:"Return ONLY valid JSON with keys title,subtitle,description,benefits (array of 4 strings),brandName,faq (array of 4 objects with q and a). Do not invent technical specs, certifications, prices, ratings or medical claims. Use only information present in the supplier data. If information is missing, write useful general ecommerce copy without making factual claims.",
    messages:[{role:"user",content:`Supplier product data:\n${JSON.stringify(data)}`}]
   })});
   if(!r.ok)return null;const j=await r.json();const txt=j.content?.map(x=>x.text||"").join("")||"";
@@ -181,6 +201,46 @@ app.post("/api/auth/claim",auth,async(req,res)=>{
   res.json({user:{email:u.email,credits:u.credits,guest:false}});
  }catch(e){res.status(409).json({error:"EMAIL_ALREADY_EXISTS"})}
 });
+
+async function paypalToken(){
+ const base=(process.env.PAYPAL_ENV||'live').toLowerCase()==='sandbox'?'https://api-m.sandbox.paypal.com':'https://api-m.paypal.com';
+ if(!process.env.PAYPAL_CLIENT_ID||!process.env.PAYPAL_CLIENT_SECRET) return null;
+ const basic=Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64');
+ const r=await fetch(`${base}/v1/oauth2/token`,{method:'POST',headers:{Authorization:`Basic ${basic}`,'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=client_credentials'});
+ if(!r.ok) throw new Error('PAYPAL_AUTH_FAILED');
+ return {base,token:(await r.json()).access_token};
+}
+
+app.get('/api/auth/google/start',async(req,res)=>{
+ if(!process.env.GOOGLE_CLIENT_ID||!process.env.GOOGLE_CLIENT_SECRET) return res.status(503).json({error:'GOOGLE_NOT_CONFIGURED'});
+ const state=crypto.randomBytes(24).toString('hex');
+ res.cookie('google_state',state,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:600000});
+ const redirect=`${process.env.APP_URL}/api/auth/google/callback`;
+ const q=new URLSearchParams({client_id:process.env.GOOGLE_CLIENT_ID,redirect_uri:redirect,response_type:'code',scope:'openid email profile',state,access_type:'offline',prompt:'select_account'});
+ res.json({url:`https://accounts.google.com/o/oauth2/v2/auth?${q}`});
+});
+app.get('/api/auth/google/callback',async(req,res)=>{
+ try{
+  if(!req.query.code||!req.query.state||req.query.state!==req.cookies.google_state) return res.redirect('/?error=google_state');
+  const redirect=`${process.env.APP_URL}/api/auth/google/callback`;
+  const body=new URLSearchParams({code:String(req.query.code),client_id:process.env.GOOGLE_CLIENT_ID,client_secret:process.env.GOOGLE_CLIENT_SECRET,redirect_uri:redirect,grant_type:'authorization_code'});
+  const tr=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  if(!tr.ok) throw new Error('GOOGLE_TOKEN_FAILED');
+  const tok=await tr.json();
+  const ur=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:`Bearer ${tok.access_token}`}});
+  if(!ur.ok) throw new Error('GOOGLE_USER_FAILED');
+  const profile=await ur.json(); const email=String(profile.email||'').trim().toLowerCase();
+  if(!email) throw new Error('GOOGLE_EMAIL_MISSING');
+  let u=db.prepare('SELECT * FROM users WHERE email=?').get(email);
+  if(!u){
+   const hash=await bcrypt.hash(crypto.randomBytes(32).toString('hex'),12);
+   const credits=email===process.env.ADMIN_EMAIL?.toLowerCase()?999999:0;
+   const info=db.prepare('INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)').run(email,hash,credits); u=userRow(info.lastInsertRowid);
+  }
+  setSession(res,u,true); res.clearCookie('google_state'); res.redirect('/?social=google');
+ }catch(e){res.redirect('/?error=google_login');}
+});
+
 app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);if(process.env.ADMIN_EMAIL && u.email.toLowerCase()===process.env.ADMIN_EMAIL.toLowerCase() && u.credits<999999)db.prepare("UPDATE users SET credits=999999 WHERE id=?").run(u.id);const fresh=userRow(u.id);res.json({email:fresh.email,credits:fresh.credits,guest:GUEST_RE.test(fresh.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(fresh.id)})});
 
 app.get("/api/shopify/start",auth,(req,res)=>{
@@ -211,7 +271,7 @@ app.post("/api/generate",auth,async(req,res)=>{
   const title=ai?.title||p.title, description=ai?.description||p.description;
   const info=db.prepare(`INSERT INTO generations(user_id,supplier_url,title,description,images_json) VALUES(?,?,?,?,?)`)
    .run(req.user.uid,url,title,description,JSON.stringify(p.images));
-  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],images:p.images,imagesBlocked:!!p.imagesBlocked}});
+  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],faq:ai?.faq||[],brandName:ai?.brandName||p.brand||"Maison Nova",price:p.price||"",currency:p.currency||"EUR",images:p.images,imagesBlocked:!!p.imagesBlocked}});
  }catch(e){res.status(502).json({error:"SUPPLIER_FETCH_FAILED",message:"Le fournisseur a refusé ou bloqué la récupération. Essayez une autre URL."})}
 });
 
@@ -226,7 +286,7 @@ app.post("/api/edit",auth,async(req,res)=>{
   db.prepare("UPDATE generations SET title=?,description=? WHERE id=?").run(title,description,g.id);
   db.prepare("UPDATE users SET credits=credits-1 WHERE id=? AND credits>0").run(u.id);
   db.prepare("INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)").run(u.id,"edit",-1,String(g.id));
-  res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],images,imagesBlocked:images.length===0}});
+  res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],faq:ai.faq||[],brandName:ai.brandName||"Maison Nova",price:"",currency:"EUR",images,imagesBlocked:images.length===0}});
  }catch(e){res.status(502).json({error:"EDIT_FAILED",message:"La régénération a échoué. Réessaie."})}
 });
 
@@ -250,6 +310,36 @@ app.post("/api/export",auth,async(req,res)=>{
   db.prepare("INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)").run(u.id,"export",-1,String(g.id));
   res.json({ok:true,product:data.productCreate.product});
  }catch(e){res.status(502).json({error:"SHOPIFY_EXPORT_FAILED",message:e.message})}
+});
+
+
+app.post('/api/paypal/order',auth,async(req,res)=>{
+ const pack=String(req.body.pack||'').toLowerCase();
+ const packs={starter:{name:'Starter',credits:10,value:'4.99'},pro:{name:'Pro',credits:50,value:'14.99'},business:{name:'Business',credits:150,value:'29.99'}};
+ const p=packs[pack]; if(!p)return res.status(400).json({error:'INVALID_PACK'});
+ try{
+  const pp=await paypalToken(); if(!pp)return res.status(503).json({error:'PAYPAL_API_NOT_CONFIGURED'});
+  const returnUrl=`${process.env.APP_URL}/api/paypal/callback`;
+  const r=await fetch(`${pp.base}/v2/checkout/orders`,{method:'POST',headers:{Authorization:`Bearer ${pp.token}`,'Content-Type':'application/json'},body:JSON.stringify({intent:'CAPTURE',purchase_units:[{reference_id:`cb-${p.credits}-${req.user.uid}`,custom_id:String(req.user.uid),description:`ClicBoutique ${p.name} - ${p.credits} crédits`,amount:{currency_code:'EUR',value:p.value}}],application_context:{brand_name:'ClicBoutique',user_action:'PAY_NOW',return_url:returnUrl,cancel_url:`${process.env.APP_URL}/?payment=cancelled`}})});
+  const j=await r.json(); if(!r.ok) throw new Error(j.message||'PAYPAL_ORDER_FAILED');
+  const approve=j.links?.find(x=>x.rel==='approve')?.href; if(!approve) throw new Error('PAYPAL_APPROVAL_MISSING');
+  db.prepare('INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)').run(req.user.uid,'purchase_pending',p.credits,j.id);
+  res.json({url:approve});
+ }catch(e){res.status(502).json({error:'PAYPAL_ORDER_FAILED',message:e.message});}
+});
+app.get('/api/paypal/callback',auth,async(req,res)=>{
+ try{
+  const orderId=String(req.query.token||''); if(!orderId) return res.redirect('/?payment=failed');
+  const pp=await paypalToken(); if(!pp) return res.redirect('/?payment=not_configured');
+  const r=await fetch(`${pp.base}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,{method:'POST',headers:{Authorization:`Bearer ${pp.token}`,'Content-Type':'application/json'}});
+  const j=await r.json(); if(!r.ok) throw new Error(j.message||'PAYPAL_CAPTURE_FAILED');
+  const pu=j.purchase_units?.[0]; const ref=String(pu?.reference_id||''); const credits=Number((ref.match(/cb-(\d+)-/)||[])[1]||0);
+  if(j.status==='COMPLETED' && credits>0){
+   const exists=db.prepare('SELECT 1 FROM credit_events WHERE user_id=? AND external_id=? AND type="purchase"').get(req.user.uid,orderId);
+   if(!exists){db.prepare('UPDATE users SET credits=credits+? WHERE id=?').run(credits,req.user.uid);db.prepare('INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)').run(req.user.uid,'purchase',credits,orderId);}
+  }
+  res.redirect(`/?payment=${j.status==='COMPLETED'?'success':'failed'}`);
+ }catch(e){res.redirect('/?payment=failed');}
 });
 
 app.get("/api/paypal/links",(req,res)=>res.json({
