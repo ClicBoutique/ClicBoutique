@@ -183,9 +183,8 @@ main{position:relative;z-index:1}
   <div class="logo">Clic<b>Boutique</b></div>
   <div class="steps" id="stepbar">
     <div class="step-dot" data-s="url"></div><div class="step-line" data-l="1"><i></i></div>
-    <div class="step-dot" data-s="shopify"></div><div class="step-line" data-l="2"><i></i></div>
-    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="3"><i></i></div>
-    <div class="step-dot" data-s="account"></div><div class="step-line" data-l="4"><i></i></div>
+    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="2"><i></i></div>
+    <div class="step-dot" data-s="account"></div><div class="step-line" data-l="3"><i></i></div>
     <div class="step-dot" data-s="store"></div>
   </div>
   <div class="topr">
@@ -218,14 +217,14 @@ main{position:relative;z-index:1}
   <div class="center">
     <div class="card">
       <div class="shop-icon">🛍️</div>
-      <h2>Connecte ta boutique Shopify</h2>
-      <p class="sub">Va dans ton admin Shopify, copie l'adresse de ta boutique et colle-la ici. ClicBoutique reconnaîtra automatiquement ta boutique et te redirigera vers Shopify pour autoriser la connexion.</p>
+      <h2>Connecte Shopify pour exporter</h2>
+      <p class="sub">Pour mettre ta boutique en ligne, colle simplement l'adresse de ton admin Shopify. ClicBoutique te redirigera ensuite vers Shopify pour autoriser la connexion.</p>
       <div class="field">
         <label>Adresse de ton admin Shopify</label>
         <input id="shopDomain" placeholder="https://admin.shopify.com/store/ma-boutique" autocomplete="url">
       </div>
       <div class="hint" style="color:#777;margin-top:8px;text-align:left">Exemple : Shopify → copie l'adresse en haut de la page Admin → colle-la ici.</div>
-      <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Connecter ma boutique</button>
+      <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Continuer avec Shopify</button>
       <div class="status" id="shopStatus">&nbsp;</div>
     </div>
   </div>
@@ -345,7 +344,7 @@ function toast(msg,ms=3200){
   clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),ms);
 }
 
-const ORDER=['url','shopify','generate','account','store'];
+const ORDER=['url','generate','account','store'];
 function goToScreen(name,mode){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   const target = name==='export' ? 'screen-export' : 'screen-'+name;
@@ -361,7 +360,7 @@ function goToScreen(name,mode){
     const li=Number(l.dataset.l);
     l.classList.toggle('done', li<=idx);
   });
-  $('stepbar').classList.toggle('hide', name==='export');
+  $('stepbar').classList.toggle('hide', name==='export' || name==='shopify');
   if(name==='account' && mode) setAccountMode(mode);
 }
 
@@ -387,10 +386,10 @@ async function startFlow(){
   if(!u){ $('urlHint').textContent="Colle d'abord le lien du produit."; $('urlHint').className='hint'; return; }
   pendingUrl=u; localStorage.setItem('cb_url',u);
   await ensureGuest();
-  goToScreen('shopify');
+  await runGenerate(u);
 }
 
-/* ---- étape 2 : Shopify ---- */
+/* ---- connexion Shopify uniquement au moment de l'export ---- */
 function extractShopifyDomain(value){
   let v=String(value||'').trim().toLowerCase();
   if(!v) return null;
@@ -420,6 +419,11 @@ async function connectShopify(){
   await ensureGuest();
   try{
     localStorage.setItem('cb_url', pendingUrl || localStorage.getItem('cb_url') || '');
+    if(generationId){
+      localStorage.setItem('cb_generation_id',String(generationId));
+      localStorage.setItem('cb_product',JSON.stringify(product||{}));
+      localStorage.setItem('cb_pending_export','1');
+    }
     const j=await api('/api/shopify/start?shop='+encodeURIComponent(shop));
     location.href=j.url;
   }catch(e){ $('shopStatus').textContent='Connexion impossible : '+e.message; $('shopStatus').className='status err'; }
@@ -524,22 +528,38 @@ async function editStore(){
 }
 async function doExport(){
   if(!generationId){ $('storeStatus').textContent="Génère d'abord une boutique."; return; }
+  await refreshMe();
+  if(!me || !me.shopify){
+    localStorage.setItem('cb_generation_id',String(generationId));
+    localStorage.setItem('cb_product',JSON.stringify(product||{}));
+    localStorage.setItem('cb_pending_export','1');
+    $('shopStatus').textContent=''; $('shopStatus').className='status';
+    goToScreen('shopify');
+    return;
+  }
   try{
     const j=await api('/api/export',{method:'POST',body:JSON.stringify({generationId})});
     await refreshMe();
     launchConfetti();
     $('viewShopBtn').onclick=()=>{ if(j.product?.onlineStoreUrl) window.open(j.product.onlineStoreUrl,'_blank'); };
+    localStorage.removeItem('cb_pending_export');
+    localStorage.removeItem('cb_generation_id');
+    localStorage.removeItem('cb_product');
     goToScreen('export');
   }catch(e){
     if(e.status===402){
       const p=await api('/api/paypal/links');
       window.open(p.creator.url,'_blank');
       $('storeStatus').textContent="Solde insuffisant : la page d'achat de crédits a été ouverte.";
+    }else if(e.data?.error==='SHOPIFY_NOT_CONNECTED'){
+      localStorage.setItem('cb_pending_export','1');
+      goToScreen('shopify');
     }else{
       $('storeStatus').textContent='Export impossible : '+e.message;
     }
   }
 }
+
 function launchConfetti(){
   const wrap=$('confettiWrap'); wrap.innerHTML='';
   const colors=['#7C3AED','#EC4899','#FB923C','#C4F135'];
@@ -563,9 +583,22 @@ function resetFlow(){
   const params=new URLSearchParams(location.search);
   if(params.get('shopify')==='connected'){
     history.replaceState({},'','/');
-    const u=localStorage.getItem('cb_url');
-    if(u){ pendingUrl=u; await runGenerate(u); }
-    else { goToScreen('url'); }
+    await refreshMe();
+    const gid=localStorage.getItem('cb_generation_id');
+    const savedProduct=localStorage.getItem('cb_product');
+    if(gid && savedProduct){
+      generationId=Number(gid);
+      try{ product=JSON.parse(savedProduct); }catch{ product=null; }
+      if(product){
+        fillStore(product);
+        goToScreen('store');
+        if(localStorage.getItem('cb_pending_export')==='1'){
+          setTimeout(()=>doExport(),300);
+        }
+      }else{ goToScreen('url'); }
+    }else{
+      goToScreen('url');
+    }
   }else if(params.get('error')==='login_required'){
     history.replaceState({},'','/');
     toast('Connecte-toi puis relance la connexion Shopify.');
