@@ -138,6 +138,7 @@ main{position:relative;z-index:1}
 .editbtn:hover{transform:translateY(-2px)}
 .editbtn:disabled{opacity:.5}
 .store{background:#fff;border-radius:0 0 20px 20px;overflow:hidden;color:var(--ink)}
+.image-warning{display:none;margin:0;padding:13px 18px;background:#ffe5e5;color:#b00020;border-bottom:1px solid #ffb8b8;text-align:center;font-size:14px}
 .storehead{height:64px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;padding:0 28px}
 .storehead b{font-family:Sora;letter-spacing:-.5px}
 .storehead span{color:var(--muted);font-size:13px}
@@ -284,6 +285,7 @@ main{position:relative;z-index:1}
       <button class="editbtn" id="editBtn" onclick="editStore()">✎ Modifier · 1 crédit</button>
     </div>
     <div class="store">
+      <div id="imageWarning" class="image-warning" role="alert">🔴 <b>Attention : AliExpress ne donne pas accès aux photos avec certains liens.</b></div>
       <div class="storehead"><b id="brand">Maison Nova</b><span>Accueil · Produit · Avis · FAQ · 🛒</span></div>
       <div class="storehero">
         <div>
@@ -511,6 +513,8 @@ function fillStore(p){
   $('title').textContent=p.title;
   $('desc').textContent=p.description;
   $('storeAddr').textContent='clicboutique.store / '+p.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30);
+  const warning=$('imageWarning');
+  warning.style.display=p.imagesBlocked ? 'block' : 'none';
   if(p.images && p.images[0]){ $('prod').style.backgroundImage=`url("${p.images[0]}")`; $('prod').textContent=''; }
   else { $('prod').style.backgroundImage='none'; $('prod').textContent='✦'; }
 }
