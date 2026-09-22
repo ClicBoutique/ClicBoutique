@@ -47,3 +47,31 @@ PAYPAL_CLIENT_SECRET=
 PAYPAL_ENV=live
 APP_URL=https://ton-domaine
 ```
+
+---
+
+## Suite (2ème passe)
+
+### Photos vraiment "copiées" dans la boutique
+Les images ne sont plus des liens directs vers AliExpress/alicdn — le serveur les **télécharge lui-même** et les ressert depuis ton propre domaine (`/api/image-proxy?...`), avec les bons en-têtes (`Referer` AliExpress) pour contourner la protection anti-hotlink qui bloquait l'affichage côté navigateur. Ça corrige à la fois :
+- l'affichage dans la boutique générée (bug corrigé au passage : l'image principale n'était en fait jamais insérée dans la page — elle ne pouvait donc jamais s'afficher, même quand la récupération réussissait) ;
+- la fiabilité de l'export Shopify, qui doit pouvoir aller chercher l'image lui-même — il ira maintenant la chercher sur ton domaine plutôt que sur AliExpress, ce qui est beaucoup plus fiable.
+
+Les liens collés manuellement (voir passe précédente) passent aussi par ce même circuit.
+
+### Admin lucarega1304@gmail.com
+Confirmé actif par défaut (voir section 3 plus haut) — aucune configuration requise, mais il faut **déployer ce nouveau `server.js`** pour que ça s'applique.
+
+### Connexion Google / Apple / « autre chose »
+Le message que tu vois (« cette méthode de connexion doit être configurée sur ClicBoutique ») confirme qu'aucune clé Google n'est pour l'instant renseignée sur ton hébergeur (Render/Vercel) — ce n'est pas un bug du code, Google exige que **tu** crées ces identifiants toi-même (impossible pour moi de les générer à ta place) :
+1. Va sur https://console.cloud.google.com/ → crée un projet (gratuit).
+2. « API et services » → « Identifiants » → « Créer des identifiants » → « ID client OAuth » → type « Application Web ».
+3. Ajoute comme URI de redirection autorisée : `https://TON-DOMAINE/api/auth/google/callback`
+4. Copie le Client ID et le Client Secret générés.
+5. Sur Render/Vercel, ajoute les variables d'environnement : `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, et `APP_URL=https://TON-DOMAINE` (sans slash à la fin).
+6. Redéploie.
+
+Pour Apple, il faut en plus un compte Apple Developer payant (99 $/an) et la génération d'une clé "Sign in with Apple" — c'est une vraie contrainte d'Apple, pas quelque chose que le code peut contourner. Tant que ce n'est pas fait, le bouton Apple annonce honnêtement qu'il n'est pas configuré plutôt que d'échouer sans explication.
+
+### Rendu visuel de la boutique générée
+La boutique générée (page produit affichée à l'écran 5) a été redessinée dans un style minimal crème/noir avec navigation centrée, badge d'avis, colonne de vignettes cliquables à côté de la photo principale, bandeau d'arguments avec icônes, section immersive image/texte en alternance clair/sombre, et zoom/lightbox sur les photos — pour se rapprocher du type de rendu haut de gamme que tu as envoyé en exemple.

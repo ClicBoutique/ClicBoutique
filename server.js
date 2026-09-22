@@ -11,6 +11,7 @@ import {fileURLToPath} from "url";
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
+app.set("trust proxy",1); // nécessaire derrière Render/Vercel pour détecter https correctement
 const db=new Database(process.env.DB_PATH || path.join(__dirname,"clicboutique.db"));
 db.pragma("journal_mode=WAL");
 db.exec(`
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS credit_events(
 app.use(express.json({limit:"1mb"}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname,"public")));
-app.use("/api/",rateLimit({windowMs:60_000,max:100}));
+app.use("/api/",rateLimit({windowMs:60_000,max:100,skip:req=>req.path.startsWith("/image-proxy")}));
+app.use("/api/image-proxy",rateLimit({windowMs:60_000,max:400}));
 
 const GUEST_RE=/^guest_[0-9a-f]{20}@guest\.local$/;
 // Admin par défaut : peut être surchargé avec la variable d'env ADMIN_EMAIL,
@@ -75,6 +77,16 @@ function auth(req,res,next){
 function userRow(id){return db.prepare("SELECT * FROM users WHERE id=?").get(id)}
 function safeUrl(u){try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.toString():null}catch{return null}}
 function unique(a){return [...new Set(a.filter(Boolean))]}
+function isPrivateHost(host){
+ return /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.)/i.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host==='::1' || host==='';
+}
+// Transforme une URL d'image externe (AliExpress, alicdn…) en URL passant par notre propre
+// serveur : ça évite le blocage par referer/anti-hotlink du fournisseur, et ça donne à Shopify
+// une image qu'il peut toujours récupérer (au lieu d'un lien direct qui peut être refusé).
+function proxyImageUrl(origin,u){
+ const safe=safeUrl(u); if(!safe) return null;
+ return `${origin}/api/image-proxy?url=${encodeURIComponent(safe)}`;
+}
 
 function decodeHtmlText(v){
  return String(v||'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\\\//g,'/').trim();
@@ -271,6 +283,29 @@ app.get('/api/auth/google/callback',async(req,res)=>{
  }catch(e){res.redirect('/?error=google_login');}
 });
 
+app.get("/api/image-proxy",async(req,res)=>{
+ const src=safeUrl(req.query.url);
+ if(!src)return res.status(400).end();
+ let host;try{host=new URL(src).hostname}catch{return res.status(400).end()}
+ if(isPrivateHost(host))return res.status(400).end();
+ const c=new AbortController();const timer=setTimeout(()=>c.abort(),10000);
+ try{
+  const r=await fetch(src,{signal:c.signal,redirect:"follow",headers:{
+   "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+   "Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+   "Referer":"https://www.aliexpress.com/"
+  }});
+  if(!r.ok)return res.status(502).end();
+  const ct=r.headers.get("content-type")||"";
+  if(!/^image\//i.test(ct))return res.status(502).end();
+  const buf=Buffer.from(await r.arrayBuffer());
+  if(buf.length>8_000_000)return res.status(502).end();
+  res.setHeader("Content-Type",ct);
+  res.setHeader("Cache-Control","public, max-age=604800, immutable");
+  res.send(buf);
+ }catch{res.status(502).end();}finally{clearTimeout(timer)}
+});
+
 app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);if(u.email.toLowerCase()===ADMIN_EMAIL && u.credits<999999)db.prepare("UPDATE users SET credits=999999 WHERE id=?").run(u.id);const fresh=userRow(u.id);res.json({email:fresh.email,credits:fresh.credits,guest:GUEST_RE.test(fresh.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(fresh.id)})});
 
 app.get("/api/shopify/start",auth,(req,res)=>{
@@ -299,9 +334,11 @@ app.post("/api/generate",auth,async(req,res)=>{
  try{
   const p=await fetchSupplier(url);const ai=await aiCopy(p);
   const title=ai?.title||p.title, description=ai?.description||p.description;
+  const origin=`${req.protocol}://${req.get("host")}`;
+  const images=unique(p.images.map(u=>proxyImageUrl(origin,u)));
   const info=db.prepare(`INSERT INTO generations(user_id,supplier_url,title,description,images_json) VALUES(?,?,?,?,?)`)
-   .run(req.user.uid,url,title,description,JSON.stringify(p.images));
-  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],faq:ai?.faq||[],brandName:ai?.brandName||p.brand||"Maison Nova",price:p.price||"",currency:p.currency||"EUR",images:p.images,imagesBlocked:!!p.imagesBlocked}});
+   .run(req.user.uid,url,title,description,JSON.stringify(images));
+  res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],faq:ai?.faq||[],brandName:ai?.brandName||p.brand||"Maison Nova",price:p.price||"",currency:p.currency||"EUR",images,imagesBlocked:images.length===0}});
  }catch(e){res.status(502).json({error:"SUPPLIER_FETCH_FAILED",message:"Le fournisseur a refusé ou bloqué la récupération. Essayez une autre URL."})}
 });
 
@@ -326,7 +363,8 @@ app.post("/api/generations/:id/images",auth,(req,res)=>{
  const g=db.prepare("SELECT * FROM generations WHERE id=? AND user_id=?").get(req.params.id,req.user.uid);
  if(!g)return res.status(404).json({error:"GENERATION_NOT_FOUND"});
  const list=Array.isArray(req.body.images)?req.body.images:[];
- const images=unique(list.map(safeUrl)).filter(u=>u && /\.(jpg|jpeg|png|webp|avif|gif)(\?|$)/i.test(u)).slice(0,12);
+ const origin=`${req.protocol}://${req.get("host")}`;
+ const images=unique(list.map(safeUrl).filter(u=>u && /\.(jpg|jpeg|png|webp|avif|gif)(\?|$)/i.test(u)).map(u=>proxyImageUrl(origin,u))).slice(0,12);
  if(!images.length)return res.status(400).json({error:"NO_VALID_IMAGE_URL"});
  db.prepare("UPDATE generations SET images_json=? WHERE id=?").run(JSON.stringify(images),g.id);
  res.json({ok:true,images});
