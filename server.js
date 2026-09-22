@@ -181,7 +181,7 @@ app.post("/api/auth/claim",auth,async(req,res)=>{
   res.json({user:{email:u.email,credits:u.credits,guest:false}});
  }catch(e){res.status(409).json({error:"EMAIL_ALREADY_EXISTS"})}
 });
-app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);res.json({email:u.email,credits:u.credits,guest:GUEST_RE.test(u.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(u.id)})});
+app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);if(process.env.ADMIN_EMAIL && u.email.toLowerCase()===process.env.ADMIN_EMAIL.toLowerCase() && u.credits<999999)db.prepare("UPDATE users SET credits=999999 WHERE id=?").run(u.id);const fresh=userRow(u.id);res.json({email:fresh.email,credits:fresh.credits,guest:GUEST_RE.test(fresh.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(fresh.id)})});
 
 app.get("/api/shopify/start",auth,(req,res)=>{
  const shop=String(req.query.shop||"").trim().toLowerCase();
@@ -253,9 +253,9 @@ app.post("/api/export",auth,async(req,res)=>{
 });
 
 app.get("/api/paypal/links",(req,res)=>res.json({
- starter:{price:"9.90",credits:10,url:process.env.PAYPAL_STARTER_URL},
- creator:{price:"19.90",credits:25,url:process.env.PAYPAL_CREATOR_URL},
- pro:{price:"39.90",credits:60,url:process.env.PAYPAL_PRO_URL}
+ starter:{name:"Starter",price:"4,99",credits:10,url:"https://www.paypal.com/ncp/payment/74YS39Z9ZWXRC"},
+ pro:{name:"Pro",price:"14,99",credits:50,url:"https://www.paypal.com/ncp/payment/9ZWBE2LBENKFG"},
+ business:{name:"Business",price:"29,99",credits:150,url:"https://www.paypal.com/ncp/payment/3QC7C8SQMS9SE"}
 }));
 app.post("/api/paypal/webhook",(req,res)=>{
  // IMPORTANT: production must verify the PayPal webhook signature before crediting anything.
