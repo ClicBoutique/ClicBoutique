@@ -55,7 +55,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname,"public")));
 app.use("/api/",rateLimit({windowMs:60_000,max:100}));
 
-const sign=(u)=>jwt.sign({uid:u.id,email:u.email},process.env.SESSION_SECRET,{expiresIn:"7d"});
+const GUEST_RE=/^guest_[0-9a-f]{20}@guest\.local$/;
+const sign=(u,remember)=>jwt.sign({uid:u.id,email:u.email},process.env.SESSION_SECRET,{expiresIn:remember?"30d":"1d"});
+function setSession(res,u,remember){
+ const opt={httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production"};
+ if(remember)opt.maxAge=2592000000; // 30 jours si "se souvenir de moi", sinon cookie de session
+ res.cookie("cb_session",sign(u,remember),opt);
+}
 function auth(req,res,next){
  const t=req.cookies.cb_session;
  if(!t)return res.status(401).json({error:"AUTH_REQUIRED"});
@@ -111,24 +117,48 @@ async function aiCopy(data){
 }
 
 app.post("/api/auth/register",async(req,res)=>{
- const email=String(req.body.email||"").trim().toLowerCase(),password=String(req.body.password||"");
+ const email=String(req.body.email||"").trim().toLowerCase(),password=String(req.body.password||""),remember=!!req.body.remember;
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<8)return res.status(400).json({error:"EMAIL_OR_PASSWORD_INVALID"});
  try{
   const hash=await bcrypt.hash(password,12);
   const info=db.prepare("INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)").run(email,hash,email===process.env.ADMIN_EMAIL?.toLowerCase()?999999:0);
-  const u=userRow(info.lastInsertRowid);res.cookie("cb_session",sign(u),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:604800000});
-  res.json({user:{email:u.email,credits:u.credits}});
+  const u=userRow(info.lastInsertRowid);setSession(res,u,remember);
+  res.json({user:{email:u.email,credits:u.credits,guest:false}});
  }catch(e){res.status(409).json({error:"EMAIL_ALREADY_EXISTS"})}
 });
 app.post("/api/auth/login",async(req,res)=>{
- const email=String(req.body.email||"").trim().toLowerCase(),password=String(req.body.password||"");
+ const email=String(req.body.email||"").trim().toLowerCase(),password=String(req.body.password||""),remember=!!req.body.remember;
  const u=db.prepare("SELECT * FROM users WHERE email=?").get(email);
  if(!u||!(await bcrypt.compare(password,u.password_hash)))return res.status(401).json({error:"INVALID_LOGIN"});
- res.cookie("cb_session",sign(u),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:604800000});
- res.json({user:{email:u.email,credits:u.credits}});
+ setSession(res,u,remember);
+ res.json({user:{email:u.email,credits:u.credits,guest:false}});
 });
 app.post("/api/auth/logout",(req,res)=>{res.clearCookie("cb_session");res.json({ok:true})});
-app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);res.json({email:u.email,credits:u.credits,shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(u.id)})});
+// Compte invité créé en silence dès que l'utilisateur commence (URL / Shopify / génération),
+// pour ne demander la création de compte qu'à l'écran juste avant l'affichage de la boutique.
+app.post("/api/auth/guest",async(req,res)=>{
+ const existing=req.cookies.cb_session;
+ if(existing){try{jwt.verify(existing,process.env.SESSION_SECRET);return res.json({ok:true})}catch{}}
+ const email=`guest_${crypto.randomBytes(10).toString("hex")}@guest.local`;
+ const hash=await bcrypt.hash(crypto.randomBytes(24).toString("hex"),10);
+ const info=db.prepare("INSERT INTO users(email,password_hash,credits) VALUES(?,?,?)").run(email,hash,0);
+ const u=userRow(info.lastInsertRowid);setSession(res,u,false);
+ res.json({user:{email:u.email,credits:u.credits,guest:true}});
+});
+// Transforme le compte invité en vrai compte (garde le même id : crédits, Shopify et boutique générée restent liés).
+app.post("/api/auth/claim",auth,async(req,res)=>{
+ const cur=userRow(req.user.uid);if(!cur)return res.status(401).json({error:"AUTH_REQUIRED"});
+ const email=String(req.body.email||"").trim().toLowerCase(),password=String(req.body.password||""),remember=!!req.body.remember;
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<8)return res.status(400).json({error:"EMAIL_OR_PASSWORD_INVALID"});
+ if(!GUEST_RE.test(cur.email))return res.status(409).json({error:"ALREADY_REGISTERED"});
+ try{
+  const hash=await bcrypt.hash(password,12);
+  db.prepare("UPDATE users SET email=?,password_hash=? WHERE id=?").run(email,hash,cur.id);
+  const u=userRow(cur.id);setSession(res,u,remember);
+  res.json({user:{email:u.email,credits:u.credits,guest:false}});
+ }catch(e){res.status(409).json({error:"EMAIL_ALREADY_EXISTS"})}
+});
+app.get("/api/me",auth,(req,res)=>{const u=userRow(req.user.uid);res.json({email:u.email,credits:u.credits,guest:GUEST_RE.test(u.email),shopify:!!db.prepare("SELECT 1 FROM shopify_sessions WHERE user_id=?").get(u.id)})});
 
 app.get("/api/shopify/start",auth,(req,res)=>{
  const shop=String(req.query.shop||"").trim().toLowerCase();
@@ -160,6 +190,21 @@ app.post("/api/generate",auth,async(req,res)=>{
    .run(req.user.uid,url,title,description,JSON.stringify(p.images));
   res.json({id:info.lastInsertRowid,product:{title,subtitle:ai?.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai?.benefits||[],images:p.images}});
  }catch(e){res.status(502).json({error:"SUPPLIER_FETCH_FAILED",message:"Le fournisseur a refusé ou bloqué la récupération. Essayez une autre URL."})}
+});
+
+app.post("/api/edit",auth,async(req,res)=>{
+ const u=userRow(req.user.uid);if(u.credits<1)return res.status(402).json({error:"NO_CREDITS"});
+ const g=db.prepare("SELECT * FROM generations WHERE id=? AND user_id=?").get(req.body.generationId,u.id);if(!g)return res.status(404).json({error:"GENERATION_NOT_FOUND"});
+ try{
+  const images=JSON.parse(g.images_json||"[]");
+  const ai=await aiCopy({title:g.title,description:g.description,images,instruction:"Propose une nouvelle variante (titre et description différents) pour ce même produit."});
+  if(!ai)return res.status(502).json({error:"EDIT_FAILED",message:"La régénération a échoué. Réessaie."});
+  const title=ai.title||g.title,description=ai.description||g.description;
+  db.prepare("UPDATE generations SET title=?,description=? WHERE id=?").run(title,description,g.id);
+  db.prepare("UPDATE users SET credits=credits-1 WHERE id=? AND credits>0").run(u.id);
+  db.prepare("INSERT INTO credit_events(user_id,type,amount,external_id) VALUES(?,?,?,?)").run(u.id,"edit",-1,String(g.id));
+  res.json({id:g.id,credits:u.credits-1,product:{title,subtitle:ai.subtitle||"Une expérience pensée autour de votre produit.",description,benefits:ai.benefits||[],images}});
+ }catch(e){res.status(502).json({error:"EDIT_FAILED",message:"La régénération a échoué. Réessaie."})}
 });
 
 async function shopifyGraphQL(shop,token,query,variables){
@@ -196,8 +241,6 @@ app.post("/api/paypal/webhook",(req,res)=>{
 });
 
 app.use((req, res) => {
-2
-res.sendFile(path.join(__dirname, "public", "index.html"));
-3
+ res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 app.listen(process.env.PORT||3000,()=>console.log(`ClicBoutique on ${process.env.PORT||3000}`));
