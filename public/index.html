@@ -129,34 +129,18 @@ main{position:relative;z-index:1}
 .switchmode a{color:var(--violet);font-weight:700;cursor:pointer;text-decoration:none}
 
 /* ---------- boutique générée (plein écran) ---------- */
-.storewrap{width:100%;max-width:1040px}
+.storewrap{width:100%;max-width:1080px}
 .browserbar{background:#241a44;border-radius:20px 20px 0 0;padding:12px 20px;display:flex;align-items:center;gap:14px}
-.dots{display:flex;gap:6px}
-.dots span{width:10px;height:10px;border-radius:50%;background:#ffffff25}
+.dots{display:flex;gap:6px}.dots span{width:10px;height:10px;border-radius:50%;background:#ffffff25}
 .browserbar .addr{flex:1;background:#ffffff10;border-radius:8px;padding:6px 14px;font-size:12px;color:#c9c2ea;text-align:center}
-.editbtn{background:linear-gradient(120deg,var(--pink),var(--orange));border:0;color:#fff;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:999px;box-shadow:0 8px 18px #ec489950;transition:.2s}
-.editbtn:hover{transform:translateY(-2px)}
-.editbtn:disabled{opacity:.5}
+.editbtn{background:linear-gradient(120deg,var(--pink),var(--orange));border:0;color:#fff;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:999px;box-shadow:0 8px 18px #ec489950;transition:.2s}.editbtn:hover{transform:translateY(-2px)}.editbtn:disabled{opacity:.5}
 .store{background:#fff;border-radius:0 0 20px 20px;overflow:hidden;color:var(--ink)}
 .image-warning{display:none;margin:0;padding:13px 18px;background:#ffe5e5;color:#b00020;border-bottom:1px solid #ffb8b8;text-align:center;font-size:14px}
-.storehead{height:64px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;padding:0 28px}
-.storehead b{font-family:Sora;letter-spacing:-.5px}
-.storehead span{color:var(--muted);font-size:13px}
-.storehero{min-height:420px;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:44px;gap:30px;background:linear-gradient(135deg,#faf7ff,#fff)}
-.storehero .tag{color:var(--violet);font-weight:700;font-size:12.5px}
-.storehero h2{font-size:clamp(28px,3.4vw,44px);line-height:1.06;letter-spacing:-1.4px;margin:12px 0}
-.storehero p{color:#5c5678;line-height:1.6;font-size:15px}
-.storehero .btn{margin-top:20px;display:inline-block}
-.prodvisual{height:320px;border-radius:26px;background-size:cover;background-position:center;display:grid;place-items:center;font-size:80px;background-color:#f1ecff;animation:float 4s ease-in-out infinite;box-shadow:0 25px 60px #7c3aed30}
-@keyframes float{50%{transform:translateY(-14px)}}
-.feat{padding:0 44px 44px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.feat .fc{border:1px solid #eee;border-radius:16px;padding:18px;transition:.25s}
-.feat .fc:hover{transform:translateY(-4px);box-shadow:0 16px 30px #7c3aed18;border-color:#e5defe}
-.feat .fc b{font-family:Sora;font-size:14.5px}
-.feat .fc p{color:var(--muted);font-size:13px;margin-top:6px}
-.exportbar{margin-top:24px;background:#ffffff10;border:1px solid #ffffff20;border-radius:18px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.exportbar .txt{font-size:13.5px;color:#cfc9e8}
-
+.storehead{min-height:76px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;padding:0 42px}
+.brandmark{display:flex;align-items:center;gap:11px}.brandicon{width:38px;height:38px;border-radius:12px;background:var(--grad-hero);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 8px 20px #7c3aed35}.storehead b{font-family:Sora;letter-spacing:-.5px;font-size:18px}.storehead span{color:var(--muted);font-size:13px}
+.storehero{min-height:500px;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:58px 52px;gap:44px;background:linear-gradient(135deg,#faf7ff,#fff)}
+.storehero .tag{color:var(--violet);font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.08em}.storehero h2{font-size:clamp(32px,3.8vw,52px);line-height:1.05;letter-spacing:-1.8px;margin:12px 0 16px}.storehero .subtitle{font-size:17px;color:#4d4669;line-height:1.55;margin-bottom:12px}.storehero p{color:#5c5678;line-height:1.7;font-size:15px}.price{font-size:26px;font-weight:800;margin-top:18px;color:#21163d}.storehero .btn{margin-top:20px;display:inline-block}.prodvisual{height:390px;border-radius:30px;background:#f1ecff;position:relative;overflow:hidden;box-shadow:0 25px 60px #7c3aed22}.prodvisual img{width:100%;height:100%;object-fit:cover;display:none}.prodvisual .placeholder{height:100%;display:grid;place-items:center;font-size:90px;color:#7c3aed55}.gallery{padding:34px 52px 10px}.gallery h3,.section-title{font-family:Sora;font-size:22px;letter-spacing:-.5px}.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}.gallery-item{height:150px;border:1px solid #ece8f4;border-radius:16px;overflow:hidden;background:#faf8ff}.gallery-item img{width:100%;height:100%;object-fit:cover}.details{padding:34px 52px 46px;display:grid;grid-template-columns:1.2fr .8fr;gap:30px}.copy{font-size:15px;line-height:1.8;color:#5c5678;white-space:pre-line;margin-top:12px}.benefits{display:grid;gap:12px;margin-top:18px}.benefit{border:1px solid #eee8f7;border-radius:15px;padding:15px;background:#fcfbff}.benefit b{font-size:14px}.benefit p{margin-top:5px;color:#6b6485;font-size:13px;line-height:1.5}.trust{background:#f8f5ff;border-radius:20px;padding:22px}.trust h3{font-family:Sora;margin-bottom:12px}.trust-row{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #e8e0f5;color:#5f5775;font-size:13px;line-height:1.5}.trust-row:last-child{border-bottom:0}.trust-icon{font-size:18px}.faq{padding:0 52px 52px}.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.faq-item{border:1px solid #eee8f7;border-radius:15px;padding:17px}.faq-item b{font-size:14px}.faq-item p{margin-top:7px;color:#6b6485;font-size:13px;line-height:1.55}.feat{padding:0 52px 44px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.feat .fc{border:1px solid #eee;border-radius:16px;padding:18px;transition:.25s}.feat .fc:hover{transform:translateY(-4px);box-shadow:0 16px 30px #7c3aed18;border-color:#e5defe}.feat .fc b{font-family:Sora;font-size:14.5px}.feat .fc p{color:var(--muted);font-size:13px;margin-top:6px}
+.exportbar{margin-top:24px;background:#ffffff10;border:1px solid #ffffff20;border-radius:18px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.exportbar .txt{font-size:13.5px;color:#cfc9e8}
 /* ---------- succès export ---------- */
 .confetti-wrap{position:relative;height:0}
 .confetti{position:absolute;top:-40px;width:8px;height:14px;border-radius:2px;animation:fall 2.6s ease-in forwards}
@@ -266,18 +250,18 @@ main{position:relative;z-index:1}
       <h2 id="acctTitle">Ta boutique est prête</h2>
       <p class="sub" id="acctSub">Crée ton compte pour la voir et l'exporter sur Shopify.</p>
       <div class="social-row">
-        <button class="social-btn" onclick="socialStub('Google')">🇬 Google</button>
-        <button class="social-btn" onclick="socialStub('Apple')">🍎 Apple</button>
-        <button class="social-btn" onclick="socialStub('Téléphone')">📱 Téléphone</button>
+        <button class="social-btn" onclick="socialLogin('google')">G Google</button>
+        <button class="social-btn" onclick="socialLogin('apple')"> Apple</button>
+        <button class="social-btn" onclick="socialLogin('phone')">▣ Téléphone</button>
       </div>
       <div class="divider">ou par email</div>
       <div class="field">
         <label>Email</label>
-        <input id="acctEmail" type="email" placeholder="toi@exemple.com">
+        <input id="acctEmail" name="email" type="email" autocomplete="username email" placeholder="toi@exemple.com">
       </div>
       <div class="field">
         <label>Mot de passe</label>
-        <input id="acctPassword" type="password" placeholder="8 caractères minimum">
+        <input id="acctPassword" name="password" type="password" autocomplete="current-password" placeholder="8 caractères minimum">
       </div>
       <label class="remember"><input type="checkbox" id="rememberMe" checked> Se souvenir de moi</label>
       <button class="btn block" id="acctSubmit" style="margin-top:20px" onclick="submitAccount()">Créer mon compte</button>
@@ -296,21 +280,39 @@ main{position:relative;z-index:1}
       <button class="editbtn" id="editBtn" onclick="editStore()">✎ Modifier · 1 crédit</button>
     </div>
     <div class="store">
-      <div id="imageWarning" class="image-warning" role="alert">🔴 <b>Attention : AliExpress ne donne pas accès aux photos avec certains liens.</b></div>
-      <div class="storehead"><b id="brand">Maison Nova</b><span>Accueil · Produit · Avis · FAQ · 🛒</span></div>
+      <div id="imageWarning" class="image-warning" role="alert"><b>Attention : AliExpress ne donne pas accès aux photos avec certains liens.</b></div>
+      <div class="storehead">
+        <div class="brandmark"><div class="brandicon" id="brandIcon">✦</div><b id="brand">Maison Nova</b></div>
+        <span>Accueil · Produit · Avis · FAQ · 🛒</span>
+      </div>
       <div class="storehero">
         <div>
           <div class="tag">Édition exclusive</div>
           <h2 id="title">Une expérience pensée autour de ton produit.</h2>
-          <p id="desc">Chaque boutique est structurée pour présenter un seul produit avec une hiérarchie visuelle claire.</p>
+          <p class="subtitle" id="subtitle">Une présentation premium, pensée pour mettre le produit au centre.</p>
+          <p id="desc">Chaque boutique est structurée pour présenter un produit avec une hiérarchie visuelle claire.</p>
+          <div class="price" id="price"></div>
           <span class="btn">Découvrir maintenant</span>
         </div>
-        <div class="prodvisual" id="prod">✦</div>
+        <div class="prodvisual" id="prod"><div class="placeholder">✦</div></div>
       </div>
+      <section class="gallery" id="gallerySection" style="display:none">
+        <h3>Le produit en images</h3><div class="gallery-grid" id="galleryGrid"></div>
+      </section>
+      <section class="details">
+        <div><div class="section-title">À propos du produit</div><div class="copy" id="longDesc"></div><div class="benefits" id="benefits"></div></div>
+        <aside class="trust"><h3>Pourquoi cette boutique ?</h3>
+          <div class="trust-row"><span class="trust-icon">✓</span><span>Présentation claire et pensée pour le produit.</span></div>
+          <div class="trust-row"><span class="trust-icon">⚡</span><span>Informations organisées pour une lecture rapide.</span></div>
+          <div class="trust-row"><span class="trust-icon">↻</span><span>Contenu modifiable avant l'export Shopify.</span></div>
+          <div class="trust-row"><span class="trust-icon">🔒</span><span>Paiement et commande à configurer selon ta boutique.</span></div>
+        </aside>
+      </section>
+      <section class="faq" id="faqSection" style="display:none"><div class="section-title">Questions fréquentes</div><div class="faq-grid" id="faqGrid"></div></section>
       <div class="feat">
-        <div class="fc"><b>Galerie immersive</b><p>Visuels et mise en scène du produit.</p></div>
-        <div class="fc"><b>Arguments produit</b><p>Bénéfices structurés pour convaincre.</p></div>
-        <div class="fc"><b>Conversion</b><p>Appels à l'action et réassurance.</p></div>
+        <div class="fc"><b>Galerie immersive</b><p>Les images originales disponibles sont mises en avant.</p></div>
+        <div class="fc"><b>Arguments produit</b><p>Les bénéfices sont structurés automatiquement par l'IA.</p></div>
+        <div class="fc"><b>Conversion</b><p>Une page longue avec réassurance et appels à l'action.</p></div>
       </div>
     </div>
     <div class="exportbar">
@@ -331,7 +333,7 @@ main{position:relative;z-index:1}
       <h2>Choisis ton pack de crédits</h2>
       <p class="sub">Un crédit sert à modifier ou exporter une boutique.</p>
       <div class="pack-grid" id="packGrid"></div>
-      <p class="pack-note">Le paiement est effectué sur PayPal. Les crédits sont ajoutés à ton compte après validation du paiement.</p>
+      <p class="pack-note">Le paiement passe par PayPal. Avec PayPal API configuré, les crédits sont ajoutés automatiquement après validation.</p>
       <button class="btn ghost" style="margin-top:18px" onclick="goBackFromPacks()">Retour</button>
     </div>
   </div>
@@ -402,8 +404,12 @@ async function ensureGuest(){
   if(!me){ try{ await api('/api/auth/guest',{method:'POST'}); }catch{} await refreshMe(); }
 }
 
-function socialStub(name){
-  toast(name+" arrive bientôt sur ClicBoutique — utilise l'email pour l'instant");
+async function socialLogin(provider){
+  try{
+    const j=await api('/api/auth/'+provider+'/start');
+    if(j.url) location.href=j.url;
+    else toast(provider==='google'?'Google n’est pas encore configuré. Utilise l’email pour l’instant.':provider==='apple'?'Apple n’est pas encore configuré. Utilise l’email pour l’instant.':'La connexion par téléphone n’est pas encore configurée.');
+  }catch(e){ toast('Cette méthode de connexion doit être configurée sur ClicBoutique.'); }
 }
 
 /* ---- étape 1 : URL ---- */
@@ -534,13 +540,37 @@ async function submitAccount(){
 
 /* ---- étape 5 : boutique ---- */
 function fillStore(p){
-  $('title').textContent=p.title;
-  $('desc').textContent=p.description;
-  $('storeAddr').textContent='clicboutique.store / '+p.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30);
-  const warning=$('imageWarning');
-  warning.style.display=p.imagesBlocked ? 'block' : 'none';
-  if(p.images && p.images[0]){ $('prod').style.backgroundImage=`url("${p.images[0]}")`; $('prod').textContent=''; }
-  else { $('prod').style.backgroundImage='none'; $('prod').textContent='✦'; }
+  product=p||{};
+  $('brand').textContent=p.brandName||'Maison Nova';
+  $('brandIcon').textContent=(p.brandName||'M').trim().charAt(0).toUpperCase();
+  $('title').textContent=p.title||'Votre produit';
+  $('subtitle').textContent=p.subtitle||'Une présentation premium, pensée pour mettre le produit au centre.';
+  $('desc').textContent=p.description||'Découvrez le produit dans une présentation claire et professionnelle.';
+  $('longDesc').textContent=p.description||'';
+  $('storeAddr').textContent='clicboutique.store / '+String(p.title||'produit').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,34);
+  const price=$('price'); price.textContent=p.price ? new Intl.NumberFormat('fr-FR',{style:'currency',currency:p.currency||'EUR'}).format(Number(p.price)) : '';
+  const benefits=$('benefits');
+  benefits.innerHTML=(p.benefits||[]).slice(0,6).map((b,i)=>`<div class="benefit"><b>${escapeHtml(b)}</b><p>${i===0?'Un argument mis en avant à partir des informations disponibles sur le produit.':'Une information structurée pour rendre la page plus claire.'}</p></div>`).join('');
+  const gallery=$('galleryGrid'); const imgs=Array.isArray(p.images)?p.images:[];
+  gallery.innerHTML='';
+  let loaded=0;
+  const warning=$('imageWarning'); warning.style.display='none';
+  const hero=$('prod'); hero.innerHTML='<div class="placeholder">✦</div>';
+  const heroImg=document.createElement('img'); heroImg.alt=p.title||'Produit'; heroImg.loading='eager';
+  heroImg.onload=()=>{hero.querySelector('.placeholder')?.remove();heroImg.style.display='block';loaded++;warning.style.display='none';};
+  heroImg.onerror=()=>{heroImg.remove();if(loaded===0 && imgs.length===1) warning.style.display='block';};
+  if(imgs[0]) heroImg.src=imgs[0]; else if(p.imagesBlocked) warning.style.display='block';
+  if(imgs.length) setTimeout(()=>{ if(loaded===0) warning.style.display='block'; },4500);
+  if(imgs.length>1){
+    $('gallerySection').style.display='block';
+    imgs.slice(1,9).forEach(src=>{
+      const item=document.createElement('div');item.className='gallery-item';const img=document.createElement('img');img.src=src;img.alt=p.title||'Produit';img.loading='lazy';
+      img.onload=()=>{loaded++;warning.style.display='none'};img.onerror=()=>{item.remove();if(loaded===0)warning.style.display='block'};item.appendChild(img);gallery.appendChild(item);
+    });
+  }else $('gallerySection').style.display='none';
+  const faqGrid=$('faqGrid'); const faqs=Array.isArray(p.faq)?p.faq:[];
+  faqGrid.innerHTML=faqs.slice(0,6).map(x=>`<div class="faq-item"><b>${escapeHtml(x.q||'Question')}</b><p>${escapeHtml(x.a||'Voir les informations du produit et de la boutique.')}</p></div>`).join('');
+  $('faqSection').style.display=faqs.length?'block':'none';
 }
 async function editStore(){
   if(!me || me.credits<1){ toast('Il te faut au moins 1 crédit pour modifier la boutique.'); openPacks(); return; }
@@ -604,16 +634,29 @@ async function openPacks(){
   const grid=$('packGrid');
   grid.innerHTML='<div class="status">Chargement des packs…</div>';
   try{
-    const packs=await api('/api/paypal/links');
-    const list=Object.values(packs);
-    grid.innerHTML=list.map(p=>`<div class="pack-card">
+    const packs=await api('/api/paypal/links'); const list=Object.entries(packs);
+    grid.innerHTML=list.map(([key,p])=>`<div class="pack-card">
       <h3>${escapeHtml(p.name)}</h3>
       <div class="pack-price">${escapeHtml(p.price)} €</div>
       <div class="pack-credit">${p.credits} crédits</div>
       <ul><li>Générations et modifications de boutique</li><li>Crédits liés à ton compte</li><li>Paiement sécurisé par PayPal</li></ul>
-      <a class="btn pack-buy" href="${escapeAttr(p.url)}" target="_blank" rel="noopener">Acheter sur PayPal</a>
+      <button class="btn pack-buy" onclick="buyPack('${key}','${escapeAttr(p.url)}')">Acheter ce pack</button>
     </div>`).join('');
   }catch(e){ grid.innerHTML='<div class="status err">Impossible de charger les packs.</div>'; }
+}
+async function buyPack(key,fallbackUrl){
+  try{
+    await ensureGuest();
+    const j=await api('/api/paypal/order',{method:'POST',body:JSON.stringify({pack:key})});
+    if(j.url){ location.href=j.url; return; }
+  }catch(e){
+    if(e.data?.error==='PAYPAL_API_NOT_CONFIGURED'){
+      window.open(fallbackUrl,'_blank','noopener');
+      toast('Le paiement PayPal s’ouvre. Pour créditer automatiquement le compte, configure PAYPAL_CLIENT_ID et PAYPAL_CLIENT_SECRET sur Render.');
+      return;
+    }
+    toast('Impossible de lancer le paiement : '+(e.message||'erreur'));
+  }
 }
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function escapeAttr(v){return escapeHtml(v);}
@@ -628,6 +671,10 @@ function resetFlow(){
 (async function init(){
   await refreshMe();
   const params=new URLSearchParams(location.search);
+  if(params.get('payment')==='success'){ await refreshMe(); toast('Paiement confirmé : tes crédits ont été ajoutés.',5000); history.replaceState({},'','/'); }
+  if(params.get('payment')==='cancelled'){ toast('Paiement annulé.'); history.replaceState({},'','/'); }
+  if(params.get('social')==='google'){ await refreshMe(); toast('Connexion Google réussie.',3500); history.replaceState({},'','/'); }
+  if(params.get('error')==='google_login'){ toast('Connexion Google impossible. Vérifie la configuration Google de ClicBoutique.'); history.replaceState({},'','/'); }
   if(params.get('shopify')==='connected'){
     history.replaceState({},'','/');
     await refreshMe();
