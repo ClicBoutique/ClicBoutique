@@ -148,8 +148,6 @@ main{position:relative;z-index:1}
 .storeicons{justify-self:end;display:flex;align-items:center;gap:18px;font-size:16px;color:var(--s-ink)}
 .storeicons .cartdot{position:relative}.storeicons .cartdot::after{content:"0";position:absolute;top:-8px;right:-9px;background:var(--s-dark);color:#fff;font-size:9px;font-weight:800;width:15px;height:15px;border-radius:50%;display:grid;place-items:center}
 .image-warning{display:none;margin:0;padding:13px 18px;background:#ffe5e5;color:#b00020;border-bottom:1px solid #ffb8b8;text-align:center;font-size:14px}
-.storehead{min-height:76px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;padding:0 42px}
-.brandmark{display:flex;align-items:center;gap:11px}.brandicon{width:38px;height:38px;border-radius:12px;background:var(--grad-hero);display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 8px 20px #7c3aed35}.storehead b{font-family:Sora;letter-spacing:-.5px;font-size:18px}.storehead span{color:var(--muted);font-size:13px}
 .storehero{min-height:500px;display:grid;grid-template-columns:1.05fr 1fr .58fr;align-items:center;padding:58px 48px;gap:36px;background:var(--s-bg)}
 .storehero .tag{color:var(--s-muted);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.14em}.storehero h2{font-family:Sora;font-size:clamp(28px,3.2vw,44px);line-height:1.08;letter-spacing:-1.2px;margin:14px 0 14px;color:var(--s-dark)}.storehero .subtitle{font-size:16px;color:#4a453f;line-height:1.55;margin-bottom:8px}.storehero p{color:var(--s-muted);line-height:1.7;font-size:14.5px}
 .mini-feats{display:flex;gap:22px;margin:22px 0 4px;flex-wrap:wrap}.mini-feat{max-width:150px}.mini-feat .mf-ico{font-size:17px;margin-bottom:6px}.mini-feat b{display:block;font-size:12.5px;color:var(--s-dark)}.mini-feat span{font-size:11.5px;color:var(--s-muted)}
@@ -163,7 +161,7 @@ main{position:relative;z-index:1}
 .thumbrail .th img{width:100%;height:100%;object-fit:cover}
 .sidebadges{display:flex;flex-direction:column;gap:12px}
 .ratingcard{background:var(--s-bg2);border:1px solid var(--s-line);border-radius:16px;padding:14px 16px}
-.ratingcard .stars{color:#d8d2c4;font-size:15px;letter-spacing:2px}
+.ratingcard .stars{color:var(--s-dark);font-size:15px;letter-spacing:2px}
 .ratingcard .rl{font-size:11.5px;color:var(--s-muted);margin-top:4px}
 .trustmini{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--s-ink);line-height:1.4}
 .trustmini .ti{font-size:16px;flex:0 0 auto}
@@ -239,8 +237,8 @@ main{position:relative;z-index:1}
   </div>
   <div class="steps" id="stepbar">
     <div class="step-dot" data-s="url"></div><div class="step-line" data-l="1"><i></i></div>
-    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="2"><i></i></div>
-    <div class="step-dot" data-s="account"></div><div class="step-line" data-l="3"><i></i></div>
+    <div class="step-dot" data-s="shopify"></div><div class="step-line" data-l="2"><i></i></div>
+    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="3"><i></i></div>
     <div class="step-dot" data-s="store"></div>
   </div>
   <div class="topr">
@@ -273,8 +271,8 @@ main{position:relative;z-index:1}
   <div class="center">
     <div class="card">
       <div class="shop-icon">🛍️</div>
-      <h2>Connecte Shopify pour exporter</h2>
-      <p class="sub">Pour mettre ta boutique en ligne, colle simplement l'adresse de ton admin Shopify. ClicBoutique te redirigera ensuite vers Shopify pour autoriser la connexion.</p>
+      <h2>Connecte Shopify</h2>
+      <p class="sub">Colle l'adresse de ton admin Shopify : ClicBoutique construira ta boutique juste après, prête à être envoyée dessus.</p>
       <div class="field">
         <label>Adresse de ton admin Shopify</label>
         <input id="shopDomain" placeholder="https://admin.shopify.com/store/ma-boutique" autocomplete="url">
@@ -282,6 +280,7 @@ main{position:relative;z-index:1}
       <div class="hint" style="color:#777;margin-top:8px;text-align:left">Exemple : Shopify → copie l'adresse en haut de la page Admin → colle-la ici.</div>
       <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Continuer avec Shopify</button>
       <div class="status" id="shopStatus">&nbsp;</div>
+      <p class="switchmode">Pas encore prêt ? <a onclick="skipShopifyForNow()">Générer la boutique d'abord, je connecterai Shopify à l'export</a></p>
     </div>
   </div>
 </section>
@@ -307,8 +306,8 @@ main{position:relative;z-index:1}
 <section class="screen" id="screen-account">
   <div class="center">
     <div class="card">
-      <h2 id="acctTitle">Ta boutique est prête</h2>
-      <p class="sub" id="acctSub">Crée ton compte pour la voir et l'exporter sur Shopify.</p>
+      <h2 id="acctTitle">Dernière étape avant l'export</h2>
+      <p class="sub" id="acctSub">Crée ton compte pour exporter ta boutique sur Shopify.</p>
       <div class="social-row">
         <button class="social-btn" onclick="socialLogin('google')">G Google</button>
         <button class="social-btn" onclick="socialLogin('apple')"> Apple</button>
@@ -474,7 +473,7 @@ function toast(msg,ms=3200){
   clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),ms);
 }
 
-const ORDER=['url','generate','account','store'];
+const ORDER=['url','shopify','generate','store'];
 // Pile de navigation : permet au bouton "Retour" de revenir à l'écran précédent
 // (ex : depuis la fiche produit/prix) sans jamais tout recommencer depuis le début.
 let screenStack=['url'];
@@ -493,7 +492,7 @@ function goToScreen(name,mode,opts={}){
     const li=Number(l.dataset.l);
     l.classList.toggle('done', li<=idx);
   });
-  $('stepbar').classList.toggle('hide', name==='export' || name==='shopify');
+  $('stepbar').classList.toggle('hide', name==='export' || name==='account');
   if(name==='account' && mode) setAccountMode(mode);
   const backable = name!=='generate' && name!=='export';
   if(!opts.fromBack && !opts.replace){
@@ -536,7 +535,12 @@ async function startFlow(){
   if(!u){ $('urlHint').textContent="Colle d'abord le lien du produit."; $('urlHint').className='hint'; return; }
   pendingUrl=u; localStorage.setItem('cb_url',u);
   await ensureGuest();
-  await runGenerate(u);
+  $('shopStatus').textContent=''; $('shopStatus').className='status';
+  goToScreen('shopify');
+}
+function skipShopifyForNow(){
+  const u=pendingUrl||localStorage.getItem('cb_url');
+  if(u) runGenerate(u); else goToScreen('url');
 }
 
 /* ---- connexion Shopify uniquement au moment de l'export ---- */
@@ -596,8 +600,7 @@ async function runGenerate(u){
     $('genStatus').textContent='Boutique générée.'; $('genStatus').className='status ok';
     setTimeout(()=>{
       fillStore(product);
-      if(me && me.guest===false){ goToScreen('store'); }
-      else { goToScreen('account','create'); }
+      goToScreen('store');
     },500);
   }catch(e){
     clearInterval(timer);
@@ -610,8 +613,8 @@ async function runGenerate(u){
 function setAccountMode(mode){
   accountMode=mode;
   if(mode==='create'){
-    $('acctTitle').textContent='Ta boutique est prête';
-    $('acctSub').textContent="Crée ton compte pour la voir et l'exporter sur Shopify.";
+    $('acctTitle').textContent="Dernière étape avant l'export";
+    $('acctSub').textContent="Crée ton compte pour exporter ta boutique sur Shopify.";
     $('acctSubmit').textContent='Créer mon compte';
     $('acctSwitch').innerHTML='Déjà un compte ? <a onclick="toggleAccountMode()">Se connecter</a>';
   }else{
@@ -640,13 +643,17 @@ async function submitAccount(){
         me={...me,email:j.user.email,guest:false};
       }
       await refreshMe();
-      goToScreen('store');
+      if(localStorage.getItem('cb_pending_export')==='1' && generationId){ await doExport(); }
+      else { goToScreen('store'); }
     }else{
       await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password,remember})});
       await refreshMe();
       // le compte existant n'a pas forcément la génération en cours liée à son id : on la recrée sous ce compte.
       const u=pendingUrl || localStorage.getItem('cb_url');
-      if(u){ await runGenerate(u); } else { goToScreen('store'); }
+      const wasPendingExport=localStorage.getItem('cb_pending_export')==='1';
+      if(u){ await runGenerate(u); if(wasPendingExport){ await doExport(); } }
+      else if(wasPendingExport && generationId){ await doExport(); }
+      else { goToScreen('store'); }
     }
   }catch(e){
     $('acctStatus').textContent = e.data?.error==='EMAIL_ALREADY_EXISTS' ? 'Cet email a déjà un compte — connecte-toi plutôt.'
@@ -767,7 +774,14 @@ async function editStore(){
 async function doExport(){
   if(!generationId){ $('storeStatus').textContent="Génère d'abord une boutique."; return; }
   await refreshMe();
-  if(!me || !me.shopify){
+  if(!me || me.guest!==false){
+    localStorage.setItem('cb_generation_id',String(generationId));
+    localStorage.setItem('cb_product',JSON.stringify(product||{}));
+    localStorage.setItem('cb_pending_export','1');
+    goToScreen('account','create');
+    return;
+  }
+  if(!me.shopify){
     localStorage.setItem('cb_generation_id',String(generationId));
     localStorage.setItem('cb_product',JSON.stringify(product||{}));
     localStorage.setItem('cb_pending_export','1');
@@ -871,7 +885,9 @@ function resetFlow(){
         }
       }else{ goToScreen('url'); }
     }else{
-      goToScreen('url');
+      // Connexion Shopify faite juste après l'URL, avant la génération : on enchaîne directement dessus.
+      const u=pendingUrl || localStorage.getItem('cb_url');
+      if(u){ pendingUrl=u; runGenerate(u); } else { goToScreen('url'); }
     }
   }else if(params.get('error')==='login_required'){
     history.replaceState({},'','/');
