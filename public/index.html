@@ -266,26 +266,7 @@ main{position:relative;z-index:1}
   </div>
 </section>
 
-<!-- ÉCRAN 2 : SHOPIFY -->
-<section class="screen" id="screen-shopify">
-  <div class="center">
-    <div class="card">
-      <div class="shop-icon">🛍️</div>
-      <h2>Connecte Shopify</h2>
-      <p class="sub">Colle l'adresse de ton admin Shopify : ClicBoutique construira ta boutique juste après, prête à être envoyée dessus.</p>
-      <div class="field">
-        <label>Adresse de ton admin Shopify</label>
-        <input id="shopDomain" placeholder="https://admin.shopify.com/store/ma-boutique" autocomplete="url">
-      </div>
-      <div class="hint" style="color:#777;margin-top:8px;text-align:left">Exemple : Shopify → copie l'adresse en haut de la page Admin → colle-la ici.</div>
-      <button class="btn block" style="margin-top:20px" onclick="connectShopify()">Continuer avec Shopify</button>
-      <div class="status" id="shopStatus">&nbsp;</div>
-      <p class="switchmode">Pas encore prêt ? <a onclick="skipShopifyForNow()">Générer la boutique d'abord, je connecterai Shopify à l'export</a></p>
-    </div>
-  </div>
-</section>
-
-<!-- ÉCRAN 3 : GÉNÉRATION -->
+<!-- ÉCRAN 2 : GÉNÉRATION -->
 <section class="screen" id="screen-generate">
   <div class="center">
     <div class="loader">
@@ -473,7 +454,7 @@ function toast(msg,ms=3200){
   clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),ms);
 }
 
-const ORDER=['url','shopify','generate','store'];
+const ORDER=['url','generate','store'];
 // Pile de navigation : permet au bouton "Retour" de revenir à l'écran précédent
 // (ex : depuis la fiche produit/prix) sans jamais tout recommencer depuis le début.
 let screenStack=['url'];
@@ -533,56 +514,17 @@ async function socialLogin(provider){
 async function startFlow(){
   const u=$('landingUrl').value.trim();
   if(!u){ $('urlHint').textContent="Colle d'abord le lien du produit."; $('urlHint').className='hint'; return; }
+  if(!/^https?:\/\//i.test(u)){ $('urlHint').textContent="Utilise une URL complète commençant par https://"; $('urlHint').className='hint'; return; }
   pendingUrl=u; localStorage.setItem('cb_url',u);
   await ensureGuest();
-  $('shopStatus').textContent=''; $('shopStatus').className='status';
-  goToScreen('shopify');
+  runGenerate(u);
 }
 function skipShopifyForNow(){
   const u=pendingUrl||localStorage.getItem('cb_url');
   if(u) runGenerate(u); else goToScreen('url');
 }
 
-/* ---- connexion Shopify uniquement au moment de l'export ---- */
-function extractShopifyDomain(value){
-  let v=String(value||'').trim().toLowerCase();
-  if(!v) return null;
-  if(!/^https?:\/\//.test(v)) v='https://'+v;
-  try{
-    const u=new URL(v);
-    // Shopify Admin URL: https://admin.shopify.com/store/STORE_HANDLE
-    if(u.hostname==='admin.shopify.com'){
-      const m=u.pathname.match(/^\/store\/([a-z0-9][a-z0-9-]*)/i);
-      return m ? m[1].toLowerCase()+'.myshopify.com' : null;
-    }
-    // Classic admin URL: https://STORE.myshopify.com/admin
-    const m=u.hostname.match(/^([a-z0-9][a-z0-9-]*)\.myshopify\.com$/i);
-    return m ? u.hostname.toLowerCase() : null;
-  }catch{return null;}
-}
-
-async function connectShopify(){
-  const raw=$('shopDomain').value;
-  const shop=extractShopifyDomain(raw);
-  if(!shop){
-    $('shopStatus').textContent='Colle l’adresse de ton admin Shopify, par exemple https://admin.shopify.com/store/ma-boutique';
-    $('shopStatus').className='status err'; return;
-  }
-  $('shopStatus').textContent='Connexion à Shopify…';
-  $('shopStatus').className='status';
-  await ensureGuest();
-  try{
-    localStorage.setItem('cb_url', pendingUrl || localStorage.getItem('cb_url') || '');
-    if(generationId){
-      localStorage.setItem('cb_generation_id',String(generationId));
-      localStorage.setItem('cb_product',JSON.stringify(product||{}));
-      localStorage.setItem('cb_pending_export','1');
-    }
-    const j=await api('/api/shopify/start?shop='+encodeURIComponent(shop));
-    location.href=j.url;
-  }catch(e){ $('shopStatus').textContent='Connexion impossible : '+e.message; $('shopStatus').className='status err'; }
-}
-
+/* ---- étape 3 : génération ---- */
 /* ---- étape 3 : génération ---- */
 async function runGenerate(u){
   goToScreen('generate');
@@ -773,22 +715,32 @@ async function editStore(){
 }
 async function doExport(){
   if(!generationId){ $('storeStatus').textContent="Génère d'abord une boutique."; return; }
+  await ensureGuest();
   await refreshMe();
-  if(!me || me.guest!==false){
-    localStorage.setItem('cb_generation_id',String(generationId));
-    localStorage.setItem('cb_product',JSON.stringify(product||{}));
-    localStorage.setItem('cb_pending_export','1');
-    goToScreen('account','create');
+
+  // Aucun compte ClicBoutique/connexion Shopify n'est demandé ici :
+  // un compte invité serveur maintient simplement les crédits et la génération.
+  if(!me){
+    $('storeStatus').textContent="Session expirée. Recharge la page puis réessaie.";
     return;
   }
+
+  if(Number(me.credits||0)<1){
+    openPacks();
+    $('storeStatus').textContent="Il te faut au moins 1 crédit pour exporter.";
+    return;
+  }
+
+  // Si Shopify n'est pas encore autorisé, on quitte immédiatement ClicBoutique
+  // et on ouvre le vrai parcours d'installation/connexion Shopify.
   if(!me.shopify){
     localStorage.setItem('cb_generation_id',String(generationId));
     localStorage.setItem('cb_product',JSON.stringify(product||{}));
     localStorage.setItem('cb_pending_export','1');
-    $('shopStatus').textContent=''; $('shopStatus').className='status';
-    goToScreen('shopify');
+    window.location.href='/api/shopify/launch';
     return;
   }
+
   try{
     const j=await api('/api/export',{method:'POST',body:JSON.stringify({generationId})});
     await refreshMe();
@@ -804,7 +756,7 @@ async function doExport(){
       $('storeStatus').textContent="Solde insuffisant : choisis un pack de crédits.";
     }else if(e.data?.error==='SHOPIFY_NOT_CONNECTED'){
       localStorage.setItem('cb_pending_export','1');
-      goToScreen('shopify');
+      window.location.href='/api/shopify/launch';
     }else{
       $('storeStatus').textContent='Export impossible : '+e.message;
     }
@@ -869,6 +821,7 @@ function resetFlow(){
   if(params.get('payment')==='cancelled'){ toast('Paiement annulé.'); history.replaceState({},'','/'); }
   if(params.get('social')==='google'){ await refreshMe(); toast('Connexion Google réussie.',3500); history.replaceState({},'','/'); }
   if(params.get('error')==='google_login'){ toast('Connexion Google impossible. Vérifie la configuration Google de ClicBoutique.'); history.replaceState({},'','/'); }
+
   if(params.get('shopify')==='connected'){
     history.replaceState({},'','/');
     await refreshMe();
@@ -879,22 +832,15 @@ function resetFlow(){
       try{ product=JSON.parse(savedProduct); }catch{ product=null; }
       if(product){
         fillStore(product);
-        goToScreen('store');
+        goToScreen('store',undefined,{replace:true});
         if(localStorage.getItem('cb_pending_export')==='1'){
           setTimeout(()=>doExport(),300);
         }
-      }else{ goToScreen('url'); }
+      }else{ goToScreen('url',undefined,{replace:true}); }
     }else{
-      // Connexion Shopify faite juste après l'URL, avant la génération : on enchaîne directement dessus.
-      const u=pendingUrl || localStorage.getItem('cb_url');
-      if(u){ pendingUrl=u; runGenerate(u); } else { goToScreen('url'); }
+      goToScreen('url',undefined,{replace:true});
     }
-  }else if(params.get('error')==='login_required'){
-    history.replaceState({},'','/');
-    toast('Connecte-toi puis relance la connexion Shopify.');
-    goToScreen('account','login');
   }
-})();
-</script>
+})();</script>
 </body>
 </html>
