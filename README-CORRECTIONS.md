@@ -96,3 +96,15 @@ Deux améliorations côté récupération :
 - Quand la page se charge normalement mais qu'aucune image exploitable n'est trouvée (fournisseur qui charge ses photos en JavaScript), le serveur retente automatiquement une seconde fois avant d'abandonner.
 - Ajout de motifs de lecture spécifiques aux fiches Amazon (`data-a-dynamic-image`, `hiRes`) et reconnaissance des CDN Temu (`kwcdn`).
 - **Cela reste une limite du fournisseur, pas totalement éliminable** : certains sites bloquent systématiquement les serveurs cloud (Render/Vercel n'ont pas d'IP « résidentielle »). Le secours reste la solution existante : coller les liens d'images à la main (clic droit → Copier l'adresse de l'image) depuis la fiche produit, gratuitement, sans consommer de crédit.
+
+
+## 7. Parcours Shopify simplifié
+- Le formulaire « Connecte Shopify » a été supprimé de ClicBoutique.
+- La génération démarre directement après l'URL produit.
+- « Exporter vers Shopify » vérifie d'abord les crédits.
+- Si le compte a au moins 1 crédit et n'est pas encore autorisé sur Shopify, le navigateur quitte immédiatement ClicBoutique et ouvre `SHOPIFY_INSTALL_URL`.
+- Après le retour OAuth, l'export reprend automatiquement avec la génération sauvegardée.
+- Pour une utilisation multi-boutiques, `SHOPIFY_INSTALL_URL` doit être le lien d'installation/listing de l'application Shopify, pas l'URL d'administration d'une boutique.
+
+## 8. Qualité de la boutique IA
+Le prompt de génération a été renforcé pour demander une identité de marque distinctive, une rédaction ecommerce premium en français, des bénéfices spécifiques au produit, une FAQ et une hiérarchie éditoriale cohérente, sans inventer de caractéristiques techniques. Les images originales récupérées sont conservées dans la galerie et utilisées à l'export.
