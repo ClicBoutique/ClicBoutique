@@ -20,20 +20,13 @@ Cette version est une base réellement exploitable côté serveur : comptes, ses
 Les liens PayPal statiques fournis sont conservés comme fallback. Pour créditer automatiquement un utilisateur après paiement, il faut brancher une intégration PayPal API/Checkout avec webhook vérifié, car un simple retour navigateur ou un lien de paiement statique ne doit pas être considéré comme une preuve de paiement. PayPal recommande de vérifier les signatures des webhooks côté serveur.
 
 ## Important pour Shopify
-La connexion Shopify n'est plus demandée pendant la création de la boutique. L'utilisateur arrive directement sur Shopify uniquement lorsqu'il clique sur « Exporter vers Shopify » et qu'il possède au moins 1 crédit.
-
-Pour un vrai parcours multi-boutiques, configure `SHOPIFY_INSTALL_URL` avec le lien d'installation/listing Shopify de ton application. Pour un test sur une seule boutique, tu peux utiliser `SHOPIFY_STORE=nom-boutique.myshopify.com`.
-
-Le callback utilisé par le flux OAuth legacy est :
+Créer une application dans Shopify Partners, renseigner les clés dans `.env`, puis configurer l'URL de callback :
 `https://TON-DOMAINE/api/shopify/callback`
 
 Scopes de départ :
 `read_products,write_products,write_themes,read_themes`
 
-Les images originales récupérées depuis le fournisseur (notamment les CDN AliExpress quand elles sont disponibles) sont conservées dans la génération et passées à Shopify via le proxy d'images ClicBoutique.
-
-Important : si tu veux que des utilisateurs de différentes boutiques Shopify puissent installer l'application, l'application Shopify doit être distribuée de façon compatible (généralement public distribution) et son parcours d'installation/OAuth doit être configuré dans le Dev Dashboard. Un simple lien d'admin d'une boutique n'est pas un lien d'installation universel. Shopify documente le flux OAuth et les liens d'installation. 
-
+Shopify recommande l'utilisation de ses bibliothèques/templates pour gérer l'authentification et le GraphQL Admin API. Les tokens doivent rester côté serveur.
 
 ## Installation locale
 ```bash
