@@ -180,7 +180,7 @@ main{position:relative;z-index:1}
 .splitband .sp-txt h3{font-family:Sora;font-size:clamp(24px,2.6vw,34px);margin:12px 0 14px;letter-spacing:-1px}
 .splitband .sp-txt p{color:#d8d4cc;line-height:1.7;font-size:14.5px;max-width:420px}
 .splitband .sp-link{margin-top:16px;color:#fff;font-weight:700;font-size:13.5px;display:inline-flex;align-items:center;gap:6px}
-.gallery{padding:34px 48px 10px}.gallery h3,.section-title{font-family:Sora;font-size:22px;letter-spacing:-.5px;position:relative;display:inline-block;color:var(--s-dark)}.section-title::after{content:"";position:absolute;left:0;bottom:-8px;width:40px;height:3px;border-radius:3px;background:var(--s-dark)}.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}.gallery-item{height:150px;border:1px solid var(--s-line);border-radius:14px;overflow:hidden;background:#faf8ff;cursor:zoom-in;transition:transform .25s,box-shadow .25s}.gallery-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 26px #00000018}.gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform .4s}.gallery-item:hover img{transform:scale(1.08)}
+.gallery{padding:34px 48px 10px}.gallery h3,.section-title{font-family:Sora;font-size:22px;letter-spacing:-.5px;position:relative;display:inline-block;color:var(--s-dark)}.section-title::after{content:"";position:absolute;left:0;bottom:-8px;width:40px;height:3px;border-radius:3px;background:var(--s-dark)}.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}.gallery-item video{width:100%;height:100%;object-fit:cover}.media-import{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border:1px dashed #d8d2c4;border-radius:14px;background:#fff}.media-import button{border:1px solid #d8d2c4;border-radius:10px;background:#fff;padding:10px 14px;font-weight:700;color:var(--s-dark)}.media-import button:hover{border-color:#222}.media-import span{font-size:12.5px;color:var(--s-muted)}.gallery-item{height:150px;border:1px solid var(--s-line);border-radius:14px;overflow:hidden;background:#faf8ff;cursor:zoom-in;transition:transform .25s,box-shadow .25s}.gallery-item:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 26px #00000018}.gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform .4s}.gallery-item:hover img{transform:scale(1.08)}
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}.reveal.show{opacity:1;transform:translateY(0)}
 .lightbox{position:fixed;inset:0;background:#0b0620ee;display:none;align-items:center;justify-content:center;z-index:60;padding:30px;backdrop-filter:blur(6px)}.lightbox.on{display:flex}.lightbox img{max-width:min(90vw,900px);max-height:85vh;border-radius:18px;box-shadow:0 40px 90px #000a}.lightbox-close{position:absolute;top:22px;right:26px;background:#ffffff18;border:1px solid #ffffff30;color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px}
 .mobilecta{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fffffff2;backdrop-filter:blur(10px);border-top:1px solid #eee;padding:12px 18px;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -10px 30px #0002;transform:translateY(110%);transition:transform .35s cubic-bezier(.2,.9,.3,1)}
@@ -237,8 +237,7 @@ main{position:relative;z-index:1}
   </div>
   <div class="steps" id="stepbar">
     <div class="step-dot" data-s="url"></div><div class="step-line" data-l="1"><i></i></div>
-    <div class="step-dot" data-s="shopify"></div><div class="step-line" data-l="2"><i></i></div>
-    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="3"><i></i></div>
+    <div class="step-dot" data-s="generate"></div><div class="step-line" data-l="2"><i></i></div>
     <div class="step-dot" data-s="store"></div>
   </div>
   <div class="topr">
@@ -331,6 +330,11 @@ main{position:relative;z-index:1}
           <div id="imageFixStatus" style="font-size:12.5px;margin-top:6px;color:#b00020"></div>
         </div>
       </div>
+      <div class="media-import">
+        <button type="button" onclick="triggerMediaImport()">＋ Importer des images / vidéos</button>
+        <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden onchange="importMediaFiles(this.files)">
+        <span id="mediaImportStatus">Ajoute tes propres visuels avant l’export.</span>
+      </div>
       <div class="storehead">
         <div class="brandmark"><div class="brandicon" id="brandIcon">✦</div><b id="brand">Maison Nova</b></div>
         <div class="storenav"><span>Accueil</span><span>Boutique</span><span>À propos</span><span>Avis</span><span>Contact</span></div>
@@ -371,7 +375,7 @@ main{position:relative;z-index:1}
         </div>
       </div>
       <section class="gallery reveal" id="gallerySection" style="display:none">
-        <h3 class="section-title">Toutes les photos</h3><div class="gallery-grid" id="galleryGrid"></div>
+        <h3 class="section-title">Photos & vidéos</h3><div class="gallery-grid" id="galleryGrid"></div>
       </section>
       <section class="details reveal">
         <div><div class="section-title">À propos du produit</div><div class="copy" id="longDesc"></div><div class="benefits" id="benefits"></div></div>
@@ -514,7 +518,6 @@ async function socialLogin(provider){
 async function startFlow(){
   const u=$('landingUrl').value.trim();
   if(!u){ $('urlHint').textContent="Colle d'abord le lien du produit."; $('urlHint').className='hint'; return; }
-  if(!/^https?:\/\//i.test(u)){ $('urlHint').textContent="Utilise une URL complète commençant par https://"; $('urlHint').className='hint'; return; }
   pendingUrl=u; localStorage.setItem('cb_url',u);
   await ensureGuest();
   runGenerate(u);
@@ -524,7 +527,46 @@ function skipShopifyForNow(){
   if(u) runGenerate(u); else goToScreen('url');
 }
 
-/* ---- étape 3 : génération ---- */
+/* ---- connexion Shopify uniquement au moment de l'export ---- */
+function extractShopifyDomain(value){
+  let v=String(value||'').trim().toLowerCase();
+  if(!v) return null;
+  if(!/^https?:\/\//.test(v)) v='https://'+v;
+  try{
+    const u=new URL(v);
+    // Shopify Admin URL: https://admin.shopify.com/store/STORE_HANDLE
+    if(u.hostname==='admin.shopify.com'){
+      const m=u.pathname.match(/^\/store\/([a-z0-9][a-z0-9-]*)/i);
+      return m ? m[1].toLowerCase()+'.myshopify.com' : null;
+    }
+    // Classic admin URL: https://STORE.myshopify.com/admin
+    const m=u.hostname.match(/^([a-z0-9][a-z0-9-]*)\.myshopify\.com$/i);
+    return m ? u.hostname.toLowerCase() : null;
+  }catch{return null;}
+}
+
+async function connectShopify(){
+  const raw=$('shopDomain').value;
+  const shop=extractShopifyDomain(raw);
+  if(!shop){
+    $('shopStatus').textContent='Colle l’adresse de ton admin Shopify, par exemple https://admin.shopify.com/store/ma-boutique';
+    $('shopStatus').className='status err'; return;
+  }
+  $('shopStatus').textContent='Connexion à Shopify…';
+  $('shopStatus').className='status';
+  await ensureGuest();
+  try{
+    localStorage.setItem('cb_url', pendingUrl || localStorage.getItem('cb_url') || '');
+    if(generationId){
+      localStorage.setItem('cb_generation_id',String(generationId));
+      localStorage.setItem('cb_product',JSON.stringify(product||{}));
+      localStorage.setItem('cb_pending_export','1');
+    }
+    const j=await api('/api/shopify/start?shop='+encodeURIComponent(shop));
+    location.href=j.url;
+  }catch(e){ $('shopStatus').textContent='Connexion impossible : '+e.message; $('shopStatus').className='status err'; }
+}
+
 /* ---- étape 3 : génération ---- */
 async function runGenerate(u){
   goToScreen('generate');
@@ -623,6 +665,8 @@ function fillStore(p){
   $('miniFeats').innerHTML=benefitList.slice(0,3).map((b,i)=>`<div class="mini-feat"><div class="mf-ico">${miniIcons[i%miniIcons.length]}</div><b>${escapeHtml(b)}</b></div>`).join('');
   $('featStrip').innerHTML=benefitList.slice(0,4).map((b,i)=>`<div class="fi"><span class="ico">${miniIcons[i%miniIcons.length]}</span><div><b>${escapeHtml(b)}</b><p>Argument mis en avant pour ce produit.</p></div></div>`).join('');
   const gallery=$('galleryGrid'); const imgs=Array.isArray(p.images)?p.images:[];
+  const importedMedia=Array.isArray(p.media)?p.media:[];
+  const allMedia=[...imgs.map(url=>({url,type:'IMAGE',source:'product'})),...importedMedia];
   gallery.innerHTML='';
   let loaded=0;
   const warning=$('imageWarning'); warning.style.display='none';
@@ -643,13 +687,19 @@ function fillStore(p){
       thumbRail.appendChild(th);
     });
   }
-  if(imgs.length>1){
+  if(allMedia.length>1){
     $('gallerySection').style.display='block';
-    imgs.slice(1,9).forEach(src=>{
-      const item=document.createElement('div');item.className='gallery-item';const img=document.createElement('img');img.src=src;img.alt=p.title||'Produit';img.loading='lazy';
-      img.onload=()=>{loaded++;warning.style.display='none'};img.onerror=()=>{item.remove();if(loaded===0)warning.style.display='block'};
-      item.onclick=()=>openLightbox(src);
-      item.appendChild(img);gallery.appendChild(item);
+    allMedia.slice(1,13).forEach(media=>{
+      const item=document.createElement('div');item.className='gallery-item';
+      if(media.type==='VIDEO'){
+        const video=document.createElement('video'); video.src=media.url; video.muted=true; video.playsInline=true; video.controls=true; video.preload='metadata';
+        item.appendChild(video);
+      }else{
+        const img=document.createElement('img');img.src=media.url;img.alt=p.title||'Produit';img.loading='lazy';
+        img.onload=()=>{loaded++;warning.style.display='none'};img.onerror=()=>{item.remove()};
+        item.onclick=()=>openLightbox(media.url); item.appendChild(img);
+      }
+      gallery.appendChild(item);
     });
   }else $('gallerySection').style.display='none';
   heroImg.onclick=()=>{ if(heroImg.style.display!=='none' && heroImg.src) openLightbox(heroImg.src); };
@@ -687,6 +737,28 @@ window.addEventListener('scroll',()=>{
 function toggleImageFix(){
   const box=$('imageFixBox'); box.style.display = box.style.display==='none' ? 'block' : 'none';
 }
+function triggerMediaImport(){
+  if(!generationId){ toast("Génère d'abord la boutique."); return; }
+  $('mediaInput').click();
+}
+async function importMediaFiles(fileList){
+  const files=[...(fileList||[])].filter(f=>/^image\/|^video\//i.test(f.type));
+  const status=$('mediaImportStatus');
+  if(!files.length){ status.textContent='Sélectionne au moins une image ou une vidéo.'; return; }
+  if(files.length>12){ status.textContent='Maximum 12 fichiers à la fois.'; return; }
+  status.textContent='Import en cours…';
+  try{
+    const fd=new FormData(); files.forEach(f=>fd.append('files',f));
+    const r=await fetch(`/api/generations/${generationId}/media`,{method:'POST',body:fd});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.message||j.error||'IMPORT_FAILED');
+    product=product||{}; product.media=j.media||[];
+    fillStore(product);
+    status.textContent=`${product.media.length} média${product.media.length>1?'s':''} importé${product.media.length>1?'s':''}.`;
+    toast('Médias ajoutés à la boutique.');
+  }catch(e){ status.textContent='Impossible d’importer les fichiers : '+(e.message||'erreur'); }
+  finally{ $('mediaInput').value=''; }
+}
 async function applyManualImages(){
   const raw=$('imageFixInput').value||'';
   const urls=raw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).filter(s=>/^https?:\/\//i.test(s));
@@ -715,32 +787,33 @@ async function editStore(){
 }
 async function doExport(){
   if(!generationId){ $('storeStatus').textContent="Génère d'abord une boutique."; return; }
-  await ensureGuest();
   await refreshMe();
-
-  // Aucun compte ClicBoutique/connexion Shopify n'est demandé ici :
-  // un compte invité serveur maintient simplement les crédits et la génération.
-  if(!me){
-    $('storeStatus').textContent="Session expirée. Recharge la page puis réessaie.";
+  if(!me || me.guest!==false){
+    localStorage.setItem('cb_generation_id',String(generationId));
+    localStorage.setItem('cb_product',JSON.stringify(product||{}));
+    localStorage.setItem('cb_pending_export','1');
+    goToScreen('account','create');
     return;
   }
-
   if(Number(me.credits||0)<1){
     openPacks();
-    $('storeStatus').textContent="Il te faut au moins 1 crédit pour exporter.";
+    $('storeStatus').textContent='Il te faut au moins 1 crédit pour exporter.';
     return;
   }
-
-  // Si Shopify n'est pas encore autorisé, on quitte immédiatement ClicBoutique
-  // et on ouvre le vrai parcours d'installation/connexion Shopify.
   if(!me.shopify){
     localStorage.setItem('cb_generation_id',String(generationId));
     localStorage.setItem('cb_product',JSON.stringify(product||{}));
     localStorage.setItem('cb_pending_export','1');
-    window.location.href='/api/shopify/launch';
+    try{
+      const j=await api('/api/shopify/install');
+      if(j.url){ location.href=j.url; return; }
+    }catch(e){
+      $('storeStatus').textContent = e.data?.error==='SHOPIFY_INSTALL_URL_NOT_CONFIGURED'
+        ? 'La connexion Shopify doit encore être configurée par le propriétaire du site (SHOPIFY_INSTALL_URL).'
+        : 'Impossible d’ouvrir Shopify : '+e.message;
+    }
     return;
   }
-
   try{
     const j=await api('/api/export',{method:'POST',body:JSON.stringify({generationId})});
     await refreshMe();
@@ -756,7 +829,7 @@ async function doExport(){
       $('storeStatus').textContent="Solde insuffisant : choisis un pack de crédits.";
     }else if(e.data?.error==='SHOPIFY_NOT_CONNECTED'){
       localStorage.setItem('cb_pending_export','1');
-      window.location.href='/api/shopify/launch';
+      goToScreen('shopify');
     }else{
       $('storeStatus').textContent='Export impossible : '+e.message;
     }
@@ -821,7 +894,6 @@ function resetFlow(){
   if(params.get('payment')==='cancelled'){ toast('Paiement annulé.'); history.replaceState({},'','/'); }
   if(params.get('social')==='google'){ await refreshMe(); toast('Connexion Google réussie.',3500); history.replaceState({},'','/'); }
   if(params.get('error')==='google_login'){ toast('Connexion Google impossible. Vérifie la configuration Google de ClicBoutique.'); history.replaceState({},'','/'); }
-
   if(params.get('shopify')==='connected'){
     history.replaceState({},'','/');
     await refreshMe();
@@ -832,15 +904,22 @@ function resetFlow(){
       try{ product=JSON.parse(savedProduct); }catch{ product=null; }
       if(product){
         fillStore(product);
-        goToScreen('store',undefined,{replace:true});
+        goToScreen('store');
         if(localStorage.getItem('cb_pending_export')==='1'){
           setTimeout(()=>doExport(),300);
         }
-      }else{ goToScreen('url',undefined,{replace:true}); }
+      }else{ goToScreen('url'); }
     }else{
-      goToScreen('url',undefined,{replace:true});
+      // Connexion Shopify faite juste après l'URL, avant la génération : on enchaîne directement dessus.
+      const u=pendingUrl || localStorage.getItem('cb_url');
+      if(u){ pendingUrl=u; runGenerate(u); } else { goToScreen('url'); }
     }
+  }else if(params.get('error')==='login_required'){
+    history.replaceState({},'','/');
+    toast('Connecte-toi puis relance la connexion Shopify.');
+    goToScreen('account','login');
   }
-})();</script>
+})();
+</script>
 </body>
 </html>
