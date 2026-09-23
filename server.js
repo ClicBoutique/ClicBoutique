@@ -104,7 +104,7 @@ function extractImages(html,base){
    u=decodeHtmlText(u).replace(/^\\\//,'/').trim();
    if(u.startsWith('//'))u='https:'+u;
    const abs=new URL(u,base).toString();
-   if(/^https?:/i.test(abs) && (/(alicdn|aliexpress|ae01|ae04|ae0[1-9])/i.test(abs) || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs))) out.push(abs);
+   if(/^https?:/i.test(abs) && (/(alicdn|aliexpress|ae01|ae04|ae0[1-9]|kwcdn|temu|media-amazon|ssl-images-amazon)/i.test(abs) || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs))) out.push(abs);
  }catch{}};
  const patterns=[
   /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi,
@@ -112,11 +112,16 @@ function extractImages(html,base){
   /<img[^>]+(?:src|data-src|data-original|data-lazy-src|data-ks-lazyload)=["']([^"']+)["']/gi,
   /(?:imagePathList|imageUrlList|skuImages|galleryImages|imageList|images)\s*[:=]\s*(\[[\s\S]{0,30000}?\])/gi,
   /(?:imageUrl|imagePath|imageURL)\s*[:=]\s*["']([^"']+)["']/gi,
-  /https?:\\?\/\\?\/[^"'\\\s]+(?:alicdn|aliexpress)[^"'\\\s]+/gi
+  /https?:\\?\/\\?\/[^"'\\\s]+(?:alicdn|aliexpress)[^"'\\\s]+/gi,
+  // Amazon : miniatures cliquables encodées en JSON dans l'attribut data-a-dynamic-image
+  /data-a-dynamic-image=["'](\{[^"']+\})["']/gi,
+  // Amazon : blocs colorImages/imageGalleryData embarqués dans le JS de la page ("hiRes"/"large")
+  /"(?:hiRes|large|mainUrl)"\s*:\s*"([^"]+)"/gi
  ];
  for(const re of patterns){for(const m of html.matchAll(re)){
    const block=m[1]||m[0];
    if(re===patterns[3]) for(const x of block.matchAll(/["'](https?:[^"']+|\/\/[^"']+)["']/g)) add(x[1]);
+   else if(re===patterns[6]){ try{ Object.keys(JSON.parse(decodeHtmlText(block))).forEach(add) }catch{} }
    else add(block);
  }}
  return unique(out).slice(0,20);
@@ -129,7 +134,7 @@ function extractJsonLd(html){
  return items.flatMap(x=>Array.isArray(x)?x:[x]);
 }
 function looksBlocked(html){
- return /id=["']nocaptcha["']|punish\.aliexpress|login\.aliexpress|verify you are a human|slider.{0,20}captcha|请完成安全验证/i.test(html||'');
+ return /id=["']nocaptcha["']|punish\.aliexpress|login\.aliexpress|verify you are a human|slider.{0,20}captcha|请完成安全验证|robot check|to discuss automated access|api-services-support@amazon|captcha.{0,20}amazon|enter the characters you see|access denied|attention required.{0,20}cloudflare/i.test(html||'');
 }
 async function fetchHtml(url,extraHeaders={}){
  const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
@@ -168,6 +173,13 @@ async function fetchSupplier(url){
   if(mUrl){const mHtml=await fetchHtml(mUrl,{'Sec-Fetch-Mode':'navigate'});if(mHtml && !looksBlocked(mHtml)){html=mHtml;effectiveUrl=mUrl;}}
  }
  if(!html)return fallback;
+ // Même quand la page charge sans être détectée comme bloquée, il arrive qu'aucune image
+ // exploitable n'en ressorte (variante desktop très allégée en JS côté fournisseur) : on retente
+ // alors la version mobile une fois, avant d'abandonner la récupération des photos.
+ if(effectiveUrl===url && extractImages(html,url).length===0){
+  const mUrl=mobileVariant(url);
+  if(mUrl){const mHtml=await fetchHtml(mUrl,{'Sec-Fetch-Mode':'navigate'});if(mHtml && !looksBlocked(mHtml) && extractImages(mHtml,mUrl).length>0){html=mHtml;effectiveUrl=mUrl;}}
+ }
  const jsonld=extractJsonLd(html).find(x=>x && (x['@type']==='Product'||Array.isArray(x['@type'])&&x['@type'].includes('Product')))||{};
  const embeddedTitle=html.match(/(?:productTitle|subject|productName)\s*[:=]\s*["']([^"']{8,300})["']/i)?.[1];
  const title=cleanProductTitle(jsonld.name || embeddedTitle ||

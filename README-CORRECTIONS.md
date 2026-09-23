@@ -75,3 +75,24 @@ Pour Apple, il faut en plus un compte Apple Developer payant (99 $/an) et la gé
 
 ### Rendu visuel de la boutique générée
 La boutique générée (page produit affichée à l'écran 5) a été redessinée dans un style minimal crème/noir avec navigation centrée, badge d'avis, colonne de vignettes cliquables à côté de la photo principale, bandeau d'arguments avec icônes, section immersive image/texte en alternance clair/sombre, et zoom/lightbox sur les photos — pour se rapprocher du type de rendu haut de gamme que tu as envoyé en exemple.
+
+---
+
+## Suite (3ème passe)
+
+### 1. Connexion Shopify déplacée juste après l'URL
+Le parcours est maintenant : **URL du produit → connexion Shopify → génération → boutique**. Dès que tu colles le lien AliExpress/Temu/Amazon/Chine et cliques sur « Commencer », l'écran Shopify apparaît immédiatement (au lieu d'attendre l'export). Si tu n'as pas encore ta boutique Shopify sous la main, un lien « Générer la boutique d'abord » te permet de continuer sans bloquer — tu pourras connecter Shopify plus tard, à l'export.
+
+### 2. Compte requis seulement à l'export
+Avant, il fallait créer un compte juste après la génération, avant même de voir la boutique. Maintenant tu peux voir, parcourir et modifier ta boutique en tant qu'invité ; la création de compte (ou connexion) n'est demandée qu'au moment où tu cliques sur « Exporter vers Shopify ». Une fois le compte créé, l'export reprend automatiquement là où tu l'avais laissé.
+
+### 3. Couleurs restantes dans la boutique générée
+Un reste de CSS de l'ancienne version (icône de marque en dégrédé violet/rose, section d'en-tête dupliquée) écrasait le thème crème/noir déjà en place et faisait réapparaître de la couleur dans la boutique générée. C'est supprimé : l'icône de marque, les étoiles d'avis et tout l'en-tête de la boutique générée sont maintenant strictement noir/blanc cassé, cohérents avec l'exemple NEXORA envoyé.
+⚠️ Les couleurs violet/rose/orange restent utilisées ailleurs, mais uniquement dans l'interface **de ClicBoutique elle-même** (le générateur), jamais dans la boutique livrée au client final.
+
+### 4. Photos qui ne remontent toujours pas
+Deux améliorations côté récupération :
+- La détection de blocage reconnaît maintenant aussi les pages anti-robot d'Amazon et les protections Cloudflare génériques (avant : seulement AliExpress), donc le message d'erreur est plus fiable.
+- Quand la page se charge normalement mais qu'aucune image exploitable n'est trouvée (fournisseur qui charge ses photos en JavaScript), le serveur retente automatiquement une seconde fois avant d'abandonner.
+- Ajout de motifs de lecture spécifiques aux fiches Amazon (`data-a-dynamic-image`, `hiRes`) et reconnaissance des CDN Temu (`kwcdn`).
+- **Cela reste une limite du fournisseur, pas totalement éliminable** : certains sites bloquent systématiquement les serveurs cloud (Render/Vercel n'ont pas d'IP « résidentielle »). Le secours reste la solution existante : coller les liens d'images à la main (clic droit → Copier l'adresse de l'image) depuis la fiche produit, gratuitement, sans consommer de crédit.
