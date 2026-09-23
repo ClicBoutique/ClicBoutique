@@ -96,3 +96,16 @@ Deux améliorations côté récupération :
 - Quand la page se charge normalement mais qu'aucune image exploitable n'est trouvée (fournisseur qui charge ses photos en JavaScript), le serveur retente automatiquement une seconde fois avant d'abandonner.
 - Ajout de motifs de lecture spécifiques aux fiches Amazon (`data-a-dynamic-image`, `hiRes`) et reconnaissance des CDN Temu (`kwcdn`).
 - **Cela reste une limite du fournisseur, pas totalement éliminable** : certains sites bloquent systématiquement les serveurs cloud (Render/Vercel n'ont pas d'IP « résidentielle »). Le secours reste la solution existante : coller les liens d'images à la main (clic droit → Copier l'adresse de l'image) depuis la fiche produit, gratuitement, sans consommer de crédit.
+
+---
+
+## Suite (4ème passe)
+
+### Photos en pleine résolution, pas en vignette
+AliExpress/alicdn renvoie d'abord des vignettes basse résolution (l'URL contient un suffixe du type `_50x50.jpg` après la vraie extension) : le serveur retire maintenant ce suffixe pour récupérer l'image d'origine en pleine qualité, avant même de l'afficher. S'applique aussi bien à la récupération automatique qu'aux liens collés à la main.
+
+### Icônes et logos écartés de la galerie
+Les regex de récupération étant assez larges, il arrivait qu'un logo, une icône ou un pixel de tracking du site fournisseur se glisse dans la galerie de la boutique. Ils sont maintenant filtrés (`/logo`, `/icon`, `/sprite`, `/favicon`, `/avatar`, pixels de tracking…).
+
+### Affichage des photos moins « coupé »
+La photo principale et la galerie utilisaient un recadrage plein cadre (`object-fit: cover`), qui allait bien pour une vraie photo de mise en scène mais coupait le produit sur les photos catalogue classiques (fond blanc, produit centré) que renvoient la plupart des fournisseurs. Elles s'affichent maintenant en entier, sur un fond crème doux, comme sur une vraie fiche produit e-commerce — plus proche du rendu professionnel visé.

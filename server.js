@@ -118,14 +118,30 @@ function cleanProductTitle(v,fallback){
  if(!t || /^\d{10,}\.html$/i.test(t) || /^\d+\.html$/i.test(t)) return fallback;
  return t.slice(0,180)||fallback;
 }
+// AliExpress/alicdn sert d'abord des vignettes basse résolution avec un suffixe de
+// redimensionnement après la vraie extension (ex: "...abc.jpg_50x50.jpg", "...abc.jpg_.avif") :
+// on le retire pour récupérer l'image d'origine en pleine résolution, plus nette dans la boutique.
+function upgradeImageQuality(u){
+ try{
+  if(/alicdn\.com|aliexpress/i.test(u)) return u.replace(/\.(jpg|jpeg|png|webp)_[^/?]*$/i,'.$1');
+  return u;
+ }catch{return u}
+}
+// Écarte les icônes/logos/sprites du thème du site fournisseur qui ne sont pas des photos produit.
+function looksLikeUiAsset(u){
+ return /\/(logo|icon|sprite|favicon|avatar|placeholder|blank|loading|spinner)[-_./]|1x1\.|pixel\.gif/i.test(u);
+}
 function extractImages(html,base){
  const out=[];
  const add=u=>{try{
    if(!u)return;
    u=decodeHtmlText(u).replace(/^\\\//,'/').trim();
    if(u.startsWith('//'))u='https:'+u;
-   const abs=new URL(u,base).toString();
-   if(/^https?:/i.test(abs) && (/(alicdn|aliexpress|ae01|ae04|ae0[1-9]|kwcdn|temu|media-amazon|ssl-images-amazon)/i.test(abs) || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs))) out.push(abs);
+   let abs=new URL(u,base).toString();
+   if(looksLikeUiAsset(abs))return;
+   if(/^https?:/i.test(abs) && (/(alicdn|aliexpress|ae01|ae04|ae0[1-9]|kwcdn|temu|media-amazon|ssl-images-amazon)/i.test(abs) || /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(abs))){
+    out.push(upgradeImageQuality(abs));
+   }
  }catch{}};
  const patterns=[
   /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi,
@@ -213,7 +229,7 @@ async function fetchSupplier(url){
  const brand=decodeHtmlText(typeof jsonld.brand==='string'?jsonld.brand:(jsonld.brand?.name||'')) || 'Maison Nova';
  const found=[];
  const jsonImages=jsonld.image?(Array.isArray(jsonld.image)?jsonld.image:[jsonld.image]):[];
- found.push(...jsonImages);
+ found.push(...jsonImages.map(upgradeImageQuality).filter(u=>!looksLikeUiAsset(String(u||''))));
  found.push(...extractImages(html,effectiveUrl));
  const images=unique(found).slice(0,12);
  return {title,description:desc,images,imagesBlocked:images.length===0,price,currency,brand};
@@ -405,7 +421,7 @@ app.post("/api/generations/:id/images",auth,(req,res)=>{
  if(!g)return res.status(404).json({error:"GENERATION_NOT_FOUND"});
  const list=Array.isArray(req.body.images)?req.body.images:[];
  const origin=`${req.protocol}://${req.get("host")}`;
- const images=unique(list.map(safeUrl).filter(u=>u && /\.(jpg|jpeg|png|webp|avif|gif)(\?|$)/i.test(u)).map(u=>proxyImageUrl(origin,u))).slice(0,12);
+ const images=unique(list.map(safeUrl).filter(u=>u && /\.(jpg|jpeg|png|webp|avif|gif)(\?|$)/i.test(u)).map(upgradeImageQuality).map(u=>proxyImageUrl(origin,u))).slice(0,12);
  if(!images.length)return res.status(400).json({error:"NO_VALID_IMAGE_URL"});
  db.prepare("UPDATE generations SET images_json=? WHERE id=?").run(JSON.stringify(images),g.id);
  res.json({ok:true,images});
